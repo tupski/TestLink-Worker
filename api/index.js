@@ -9,17 +9,24 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-/** Root proyek: di Vercel bundle, __dirname bisa beda; cari folder yang punya index.html */
+/** Root proyek: di Vercel, includeFiles + bundler bisa menaruh index.html sejajar __dirname atau di atasnya */
 function resolveProjectRoot() {
-    const candidates = [path.join(__dirname, '..'), process.cwd()];
-    for (const c of candidates) {
+    let dir = path.resolve(__dirname);
+    for (let i = 0; i < 10; i++) {
         try {
-            if (fs.existsSync(path.join(c, 'index.html')) || fs.existsSync(path.join(c, '404.html'))) {
-                return c;
-            }
+            if (fs.existsSync(path.join(dir, 'index.html'))) return dir;
+        } catch (e) {}
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    const fallbacks = [path.join(__dirname, '..'), process.cwd()];
+    for (const c of fallbacks) {
+        try {
+            if (fs.existsSync(path.join(c, 'index.html'))) return path.resolve(c);
         } catch (e) {}
     }
-    return path.join(__dirname, '..');
+    return path.resolve(path.join(__dirname, '..'));
 }
 const ROOT = resolveProjectRoot();
 
@@ -493,9 +500,16 @@ app.post('/api/progress', (req, res) => {
     );
 });
 
-// Semua halaman & aset (Vercel: rewrite catch-all ke /api + includeFiles)
+// Halaman & aset statis (Vercel: semua traffic lewat /api + includeFiles membawa file ke bundle)
 app.get(['/admin', '/admin/'], (req, res) => res.redirect(302, '/admin.html'));
 app.get(['/about', '/about/'], (req, res) => res.redirect(302, '/about.html'));
+app.get('/', (req, res, next) => {
+    const indexPath = path.join(ROOT, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath, (err) => (err ? next(err) : undefined));
+    }
+    next();
+});
 app.use(express.static(ROOT));
 
 app.use((req, res) => {

@@ -2,11 +2,15 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": ["404.html", "403.html", "500.html"]
+      "includeFiles": [
+        "*.html",
+        "css/**",
+        "js/**",
+        "icons/**",
+        "manifest.webmanifest",
+        "sw.js"
+      ]
     }
   },
-  "rewrites": [
-    { "handle": "filesystem" },
-    { "source": "/(.*)", "destination": "/api" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }
