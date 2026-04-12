@@ -4,11 +4,11 @@
 [![Status](https://img.shields.io/badge/status-verified-emerald.svg?style=for-the-badge)]()
 [![PWA](https://img.shields.io/badge/PWA-ready-orange.svg?style=for-the-badge)]()
 
-LinkFlow adalah platform pengujian tautan (link tracker) modern yang dirancang untuk presisi tinggi, otomatisasi cerdas, dan pengalaman pengguna premium. Dibangun dengan fokus pada kecepatan eksekusi, monitoring koneksi ISP yang akurat, dan manajemen antrean massal.
+TestLink Worker adalah platform test link (link tracker) modern yang dirancang untuk presisi tinggi, otomatisasi cerdas, dan premium user experience. Dibangun dengan fokus pada kecepatan eksekusi, monitoring koneksi ISP yang akurat, dan manajemen antrean massal.
 
 ---
 
-## ✨ Fitur Unggulan
+## Fitur
 
 - **Dual-Mode Runner**: 
     - **Mode Fokus Tab**: Membuka link di tab baru dan menunggu Anda kembali untuk validasi manual (Normal/Blokir/Error).
@@ -21,7 +21,7 @@ LinkFlow adalah platform pengujian tautan (link tracker) modern yang dirancang u
 
 ---
 
-## 🛠️ Stack Teknologi
+## Stack
 
 - **Frontend**: Vanilla Javascript (ES6+), Tailwind CSS (Layouting), HTML5 Semantic.
 - **Styling**: Custom Vanilla CSS dengan arsitektur Glassmorphism & High-Contrast Dark Mode.
@@ -31,7 +31,7 @@ LinkFlow adalah platform pengujian tautan (link tracker) modern yang dirancang u
 
 ---
 
-## 🏎️ Memulai (Localhost)
+## Memulai (Localhost)
 
 1. **Instalasi**:
    ```bash
@@ -59,5 +59,5 @@ Gunakan skrip pembantu `BukaTunnel.bat` untuk mengonlinekan server lokal Anda se
 
 ## Lisensi
 
-- **Desain & Pengembangan**: IDR-AH-B组 Artupski.
+- **Desain & Pengembangan**: Artupski
 - **Font**: [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) oleh Google Fonts.
