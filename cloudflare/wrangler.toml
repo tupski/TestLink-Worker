@@ -1,0 +1,13 @@
+# Cloudflare Worker — passthrough ke Vercel (atau origin Node lain)
+# Deploy: cd cloudflare && npx wrangler deploy
+#
+# Wajib set secret (jangan commit URL ke git):
+#   npx wrangler secret put BACKEND_URL
+# Contoh nilai: https://testlink-xxxxx.vercel.app
+#
+# Rute domain (testlink.anggur.in) diatur di dashboard:
+# Workers & Pages → worker ini → Triggers → Routes → testlink.anggur.in/*
+
+name = "testlink-worker"
+main = "worker.js"
+compatibility_date = "2024-11-01"

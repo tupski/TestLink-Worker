@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
@@ -503,6 +504,14 @@ app.post('/api/progress', (req, res) => {
 // Halaman & aset statis (Vercel: semua traffic lewat /api + includeFiles membawa file ke bundle)
 app.get(['/admin', '/admin/'], (req, res) => res.redirect(302, '/admin.html'));
 app.get(['/about', '/about/'], (req, res) => res.redirect(302, '/about.html'));
+app.get('/favicon.ico', (req, res) => {
+    const icon = path.join(ROOT, 'icons', 'icon.svg');
+    if (fs.existsSync(icon)) {
+        res.type('image/svg+xml');
+        return res.sendFile(icon);
+    }
+    res.status(204).end();
+});
 app.get('/', (req, res, next) => {
     const indexPath = path.join(ROOT, 'index.html');
     if (fs.existsSync(indexPath)) {
