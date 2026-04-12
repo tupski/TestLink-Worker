@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-const ROOT = path.join(__dirname);
+const ROOT = process.env.VERCEL ? process.cwd() : __dirname;
 
 /** Hostname / path fragment redirect halaman blokir (Kominfo / operator) */
 const BLOCK_PAGE_FRAGMENTS = [
