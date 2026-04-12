@@ -2,15 +2,7 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "*.html",
-        "css/**",
-        "js/**",
-        "icons/**",
-        "manifest.webmanifest",
-        "sw.js",
-        "data/**"
-      ]
+      "includeFiles": "{*.html,css/**,js/**,icons/**,manifest.webmanifest,sw.js,data/**}"
     }
   },
   "rewrites": [
