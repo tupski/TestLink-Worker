@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · Test Link</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-indigo-500/25 pb-24">
+    <div class="max-w-2xl mx-auto px-4 pt-6 sm:pt-10">
+        <header class="flex flex-wrap items-start justify-between gap-4 mb-8">
+            <div>
+                <p class="text-[9px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-1">Kontrol pusat</p>
+                <h1 class="text-3xl font-black text-white italic tracking-tight">Test Link</h1>
+                <p class="text-xs text-slate-500 font-semibold mt-1 max-w-xs">Atur kategori, copy worker, dan branding halaman depan.</p>
+            </div>
+            <a href="/" class="shrink-0 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-black uppercase tracking-widest text-white px-4 py-3 rounded-xl transition-colors shadow-lg">← Worker</a>
+        </header>
+
+        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-6 -mx-1 px-1">
+            <button type="button" data-tab-btn="dash" class="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-900/30">Ringkas</button>
+            <button type="button" data-tab-btn="sites" class="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-800 bg-slate-900 text-slate-500">Kategori</button>
+            <button type="button" data-tab-btn="settings" class="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-800 bg-slate-900 text-slate-500">Pengaturan</button>
+            <button type="button" data-tab-btn="history" class="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-800 bg-slate-900 text-slate-500">Riwayat</button>
+            <button type="button" data-tab-btn="about" class="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-800 bg-slate-900 text-slate-500">Tentang</button>
+        </div>
+
+        <!-- Tab: Ringkas -->
+        <div data-tab-panel="dash" class="space-y-4">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+                    <p id="statSites" class="text-2xl font-black text-white italic">—</p>
+                    <p class="text-[9px] font-black uppercase text-slate-500 mt-1 tracking-wider">Kategori</p>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+                    <p id="statLinks" class="text-2xl font-black text-indigo-400 italic">—</p>
+                    <p class="text-[9px] font-black uppercase text-slate-500 mt-1 tracking-wider">Total link</p>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+                    <p id="statHistory" class="text-2xl font-black text-violet-400 italic">—</p>
+                    <p class="text-[9px] font-black uppercase text-slate-500 mt-1 tracking-wider">Riwayat</p>
+                </div>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-sm text-slate-400 leading-relaxed">
+                <strong class="text-slate-200">Tips:</strong> ubah judul & tagline di tab Pengaturan supaya halaman worker konsisten sama brand kamu. Riwayat di tab terakhir bisa dikosongin kalau udah berantakan.
+            </div>
+        </div>
+
+        <!-- Tab: Kategori -->
+        <div data-tab-panel="sites" class="hidden space-y-6">
+            <div id="adminFormContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xs text-white font-black uppercase tracking-widest">Tambah / edit kategori</h2>
+                    <button type="button" onclick="cancelEdit()" id="cancelEditBtn" class="hidden px-3 py-2 bg-slate-800 text-slate-400 text-[9px] font-black uppercase tracking-widest rounded-lg hover:text-white">Batal</button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Nama skenario</label>
+                        <input type="text" id="siteNameInput" placeholder="Contoh: Bundle ISP X" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-white outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Satu link per baris</label>
+                        <textarea id="siteLinksInput" rows="5" placeholder="https://contoh.com&#10;lain.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 outline-none focus:border-indigo-500 font-mono leading-relaxed no-scrollbar"></textarea>
+                    </div>
+                    <button type="button" onclick="saveSiteManual()" id="saveBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-[0.99] shadow-indigo-900/40">Simpan ke server</button>
+                </div>
+                <div class="mt-5 pt-5 border-t border-slate-800">
+                    <input type="file" id="fileInput" accept=".txt" class="hidden" onchange="handleFile(this)">
+                    <label for="fileInput" class="cursor-pointer flex flex-col items-center py-8 px-4 border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl bg-slate-950/50 transition-colors">
+                        <span class="text-slate-400 text-[11px] font-black uppercase tracking-widest group-hover:text-indigo-400">Upload TXT</span>
+                        <span class="text-[9px] text-slate-600 mt-2 uppercase text-center">Pisah blok dengan baris berisi <code class="text-indigo-400">-</code> saja</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-[10px] text-slate-600 font-black uppercase tracking-[0.2em] mb-3">Urutan ditampilkan di worker</h3>
+                <div id="listDisplay" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Pengaturan -->
+        <div data-tab-panel="settings" class="hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+                <h2 class="text-xs text-white font-black uppercase tracking-widest">Branding halaman worker</h2>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Judul aplikasi</label>
+                    <input type="text" id="setAppTitle" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500" maxlength="120">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Tagline</label>
+                    <input type="text" id="setAppTagline" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500" maxlength="200">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Default jeda runner (detik)</label>
+                    <input type="number" id="setDefaultInterval" min="1" max="120" value="3" class="w-full max-w-[8rem] bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500">
+                </div>
+                <label class="flex items-center gap-3 cursor-pointer py-2">
+                    <input type="checkbox" id="setMaintenanceMode" class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-950">
+                    <span class="text-xs font-bold text-slate-300">Mode maintenance <span class="text-slate-500 font-normal">(banner di worker)</span></span>
+                </label>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Pesan maintenance</label>
+                    <textarea id="setMaintenanceMsg" rows="2" maxlength="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <button type="button" onclick="saveSettings()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg">Simpan pengaturan</button>
+            </div>
+        </div>
+
+        <!-- Tab: Halaman Tentang (publik) -->
+        <div data-tab-panel="about" class="hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+                <h2 class="text-xs text-white font-black uppercase tracking-widest">Konten about.html</h2>
+                <p class="text-[11px] text-slate-500 leading-relaxed">Teks ini ditampilkan di halaman <code class="text-indigo-400">/about.html</code> (worker). Gunakan baris baru untuk paragraf.</p>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Judul halaman</label>
+                    <input type="text" id="setAboutTitle" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500" maxlength="200">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Isi (plain text)</label>
+                    <textarea id="setAboutBody" rows="12" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 outline-none focus:border-indigo-500 font-sans leading-relaxed no-scrollbar"></textarea>
+                </div>
+                <button type="button" onclick="saveAboutPage()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg">Simpan halaman Tentang</button>
+            </div>
+        </div>
+
+        <!-- Tab: Riwayat server -->
+        <div data-tab-panel="history" class="hidden space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-xs text-slate-500 font-semibold">50 entri terakhir (baca saja)</p>
+                <button type="button" onclick="clearServerHistory()" class="text-[10px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 border border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5">Kosongkan riwayat</button>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden overflow-x-auto">
+                <table class="w-full text-left min-w-[28rem]">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                            <th class="px-4 py-3">Aksi</th>
+                            <th class="px-4 py-3">Situs</th>
+                            <th class="px-4 py-3">Ringkas</th>
+                            <th class="px-4 py-3">Waktu</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[3000] max-w-sm w-[calc(100%-2rem)] px-4 py-3 rounded-2xl bg-slate-900 border border-indigo-500/40 text-xs font-bold text-slate-100 text-center shadow-2xl transition-all duration-300 opacity-0 translate-y-2"></div>
+
+    <div id="pwdModal" class="hidden fixed inset-0 bg-black/85 z-[2000] flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+            <h3 class="font-black text-white mb-2 uppercase tracking-widest text-xs">Login admin</h3>
+            <p class="text-[10px] text-slate-400 mb-6 font-semibold leading-relaxed">Masukin sandi panel. Session cuma di tab ini (sessionStorage).</p>
+            <input type="password" id="pwdInput" placeholder="••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white mb-6 focus:border-indigo-500 outline-none text-center tracking-widest font-black">
+            <div class="flex gap-3">
+                <button type="button" onclick="rejectPwd()" class="flex-1 py-3 text-[10px] uppercase tracking-widest font-black text-slate-400 hover:text-white rounded-xl hover:bg-slate-800">Batal</button>
+                <button type="button" onclick="resolvePwd()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-[10px] uppercase tracking-widest font-black text-white py-3 shadow-lg">Masuk</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-slate-800 mt-12 pt-8 pb-8 text-center">
+        <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">
+            Copyright © <span id="adminFooterYear"></span> —
+            <a href="https://signal.me/#eu/FpZSd_PViBDXqQBWjTRhw0PtNF47vL0YIcJb7960UjsTB8u-tLxO_oKmVspN2xvA" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:text-indigo-300">IDR-AH-B组 Artupski</a>
+        </p>
+    </footer>
+
+    <script src="js/admin.js"></script>
+    <script>document.getElementById('adminFooterYear').textContent = new Date().getFullYear();</script>
+</body>
+</html>

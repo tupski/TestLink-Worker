@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <title>Tentang · Test Link</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="page-shell selection:bg-indigo-500/20 text-slate-100 min-h-screen flex flex-col">
+    <header class="app-topbar">
+        <div class="app-topbar__inner max-w-xl">
+            <div>
+                <p class="text-[9px] font-black uppercase tracking-[0.25em] text-indigo-400/90 mb-0.5">Test Link</p>
+                <h1 id="aboutTitle" class="text-2xl font-black text-white italic tracking-tight">Tentang</h1>
+            </div>
+            <a href="/" class="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white shrink-0">← Worker</a>
+        </div>
+    </header>
+
+    <main class="max-w-xl mx-auto px-4 py-8 flex-1 w-full">
+        <div id="aboutBody" class="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-medium"></div>
+    </main>
+
+    <footer class="site-footer mt-auto" role="contentinfo">
+        <div class="site-footer__inner">
+            <div class="site-footer__brand">
+                <span class="site-footer__label">Test Link</span>
+                <span class="site-footer__dot" aria-hidden="true"></span>
+                <span class="site-footer__cr">© <span id="aboutFooterYear"></span></span>
+            </div>
+            <p class="site-footer__credit">
+                <a href="https://signal.me/#eu/FpZSd_PViBDXqQBWjTRhw0PtNF47vL0YIcJb7960UjsTB8u-tLxO_oKmVspN2xvA" target="_blank" rel="noopener noreferrer" class="site-footer__link">IDR-AH-B组 Artupski</a>
+            </p>
+            <p class="site-footer__meta"><a href="/" class="site-footer__link site-footer__link--muted">Beranda worker</a></p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('aboutFooterYear').textContent = new Date().getFullYear();
+        (async function () {
+            try {
+                const r = await fetch('/api/settings');
+                const j = await r.json();
+                const s = j.settings || {};
+                document.getElementById('aboutTitle').textContent = s.about_page_title || 'Tentang';
+                document.title = (s.about_page_title || 'Tentang') + ' · Test Link';
+                document.getElementById('aboutBody').textContent = s.about_page_body || 'Belum ada konten. Atur di Admin → tab Tentang.';
+            } catch (e) {
+                document.getElementById('aboutBody').textContent = 'Gagal memuat pengaturan dari server.';
+            }
+        })();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+        }
+    </script>
+</body>
+</html>

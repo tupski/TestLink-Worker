@@ -1,0 +1,13 @@
+{
+  "name": "Test Link Worker",
+  "short_name": "TestLink",
+  "description": "Runner link Otomatis & Semi-otomatis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6366f1",
+  "lang": "id",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
