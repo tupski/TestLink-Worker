@@ -8,9 +8,14 @@
         "js/**",
         "icons/**",
         "manifest.webmanifest",
-        "sw.js"
+        "sw.js",
+        "data/**"
       ]
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/about", "destination": "/about.html" }
+  ]
 }

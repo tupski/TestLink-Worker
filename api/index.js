@@ -10,26 +10,22 @@ app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-/** Root proyek: di Vercel, includeFiles + bundler bisa menaruh index.html sejajar __dirname atau di atasnya */
+/** Root proyek: di Vercel, includeFiles membawa file ke /var/task. */
 function resolveProjectRoot() {
+    // 1. Coba dari process.cwd() (seringkali root di Vercel)
+    const cwd = process.cwd();
+    if (fs.existsSync(path.join(cwd, 'index.html'))) return cwd;
+
+    // 2. Coba naik dari __dirname (jika di api/index.js)
     let dir = path.resolve(__dirname);
-    for (let i = 0; i < 10; i++) {
-        try {
-            if (fs.existsSync(path.join(dir, 'index.html'))) return dir;
-        } catch (e) {}
-        const parent = path.dirname(dir);
-        if (parent === dir) break;
-        dir = parent;
-    }
-    const fallbacks = [path.join(__dirname, '..'), process.cwd()];
-    for (const c of fallbacks) {
-        try {
-            if (fs.existsSync(path.join(c, 'index.html'))) return path.resolve(c);
-        } catch (e) {}
-    }
+    if (dir.endsWith('api')) dir = path.dirname(dir);
+    if (fs.existsSync(path.join(dir, 'index.html'))) return dir;
+
+    // 3. Fallback standar
     return path.resolve(path.join(__dirname, '..'));
 }
 const ROOT = resolveProjectRoot();
+console.log(`📂 Project ROOT set to: ${ROOT}`);
 
 /** Hostname / path fragment redirect halaman blokir (Kominfo / operator) */
 const BLOCK_PAGE_FRAGMENTS = [
