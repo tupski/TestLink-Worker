@@ -140,14 +140,18 @@ async function resolveUrlWithRedirects(startUrl, maxMs) {
     }
 }
 
-const dbFolder = path.join(__dirname, 'data');
+const isVercel = process.env.VERCEL === '1';
+const dbFolder = isVercel ? '/tmp' : path.join(__dirname, 'data');
 if (!fs.existsSync(dbFolder)) {
     fs.mkdirSync(dbFolder, { recursive: true });
 }
 const dbPath = path.join(dbFolder, 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
 
-console.log('💾 Using Local SQLite Database');
+console.log(`💾 Using ${isVercel ? 'Vercel /tmp' : 'Local'} SQLite Database at: ${dbPath}`);
+if (isVercel) {
+    console.warn('⚠️ Warning: Data stored in /tmp will be lost when the server restarts on Vercel.');
+}
 
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS sites (
@@ -492,4 +496,9 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+}
+
+module.exports = app;
