@@ -9,8 +9,19 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Di Vercel API function, root ada satu level di atas folder /api
-const ROOT = path.join(__dirname, '..');
+/** Root proyek: di Vercel bundle, __dirname bisa beda; cari folder yang punya index.html */
+function resolveProjectRoot() {
+    const candidates = [path.join(__dirname, '..'), process.cwd()];
+    for (const c of candidates) {
+        try {
+            if (fs.existsSync(path.join(c, 'index.html')) || fs.existsSync(path.join(c, '404.html'))) {
+                return c;
+            }
+        } catch (e) {}
+    }
+    return path.join(__dirname, '..');
+}
+const ROOT = resolveProjectRoot();
 
 /** Hostname / path fragment redirect halaman blokir (Kominfo / operator) */
 const BLOCK_PAGE_FRAGMENTS = [
@@ -482,7 +493,9 @@ app.post('/api/progress', (req, res) => {
     );
 });
 
-// Penting: Di Vercel, static files dilayani Vercel CDN, tapi fallback 404 tetap butuh ini
+// Semua halaman & aset (Vercel: rewrite catch-all ke /api + includeFiles)
+app.get(['/admin', '/admin/'], (req, res) => res.redirect(302, '/admin.html'));
+app.get(['/about', '/about/'], (req, res) => res.redirect(302, '/about.html'));
 app.use(express.static(ROOT));
 
 app.use((req, res) => {

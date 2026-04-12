@@ -2,13 +2,11 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": "*.html"
+      "includeFiles": ["404.html", "403.html", "500.html"]
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/about", "destination": "/about.html" },
-    { "source": "/(.*)", "destination": "/$1" }
+    { "handle": "filesystem" },
+    { "source": "/(.*)", "destination": "/api" }
   ]
 }
