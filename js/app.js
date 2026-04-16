@@ -388,6 +388,7 @@ async function executeOpenLink() {
 
         const fullUrl = url.startsWith('http') ? url : 'https://' + url;
         let blocked = false;
+        let isGsbThreat = false;
         try {
             const chk = await fetch(`${API_BASE}/api/check-block`, {
                 method: 'POST',
@@ -397,14 +398,16 @@ async function executeOpenLink() {
             if (chk.ok) {
                 const j = await chk.json();
                 blocked = !!j.blocked;
+                isGsbThreat = !!j.fromGSB;
             }
         } catch (e) {}
 
-        document.getElementById('currentLink').innerText = url + (blocked ? '  ·  redirect blokir' : '');
+        document.getElementById('currentLink').innerText = url + (blocked ? (isGsbThreat ? '  ·  ditolak GSB' : '  ·  redirect blokir') : '');
         if (!blocked) {
             try { window.open(fullUrl, '_blank'); } catch (e) {}
         } else {
-            showToast('Link redirect ke halaman blokir — dilewati.');
+            const msg = isGsbThreat ? 'Bahaya Malicious Terdeteksi Google Safe Browsing — dilewati.' : 'Link redirect ke halaman blokir Kominfo — dilewati.';
+            showToast(msg);
             appendBlockedLinkToReport(fullUrl);
         }
 
