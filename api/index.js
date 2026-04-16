@@ -178,6 +178,7 @@ db.serialize(() => {
     )`, (err) => {
         if (!err) {
             db.run(`ALTER TABLE sites ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
+            db.run(`ALTER TABLE sites ADD COLUMN is_active INTEGER DEFAULT 1`, () => {});
         }
     });
 
@@ -357,6 +358,7 @@ app.get('/api/sites', (req, res) => {
 
     db.all(`SELECT * FROM sites ORDER BY sort_order ASC, created_at DESC`, [], (err, sites) => {
         if (err) return res.status(500).json({ error: err.message });
+        
         if (!deviceId) return res.json({ sites });
 
         db.all(`SELECT * FROM progress WHERE device_id = ?`, [deviceId], (err2, progressRows) => {
@@ -367,10 +369,13 @@ app.get('/api/sites', (req, res) => {
                 progressMap[row.site_id] = row;
             });
 
-            const enrichedSites = sites.map((site) => ({
-                ...site,
-                progress: progressMap[site.id] || { last_index: 0, normal_count: 0, error_count: 0 }
-            }));
+            // If deviceId is provided (Worker app), filter out inactive sites
+            const enrichedSites = sites
+                .filter(site => site.is_active !== 0)
+                .map((site) => ({
+                    ...site,
+                    progress: progressMap[site.id] || { last_index: 0, normal_count: 0, error_count: 0 }
+                }));
 
             res.json({ sites: enrichedSites });
         });
@@ -418,6 +423,14 @@ app.put('/api/sites/order', requireAdmin, (req, res) => {
         db.run('COMMIT');
     });
     res.json({ success: true });
+});
+
+app.put('/api/sites/:id/toggle', requireAdmin, (req, res) => {
+    const { is_active } = req.body;
+    db.run(`UPDATE sites SET is_active = ? WHERE id = ?`, [is_active ? 1 : 0, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
 });
 
 app.put('/api/sites/:id', requireAdmin, (req, res) => {

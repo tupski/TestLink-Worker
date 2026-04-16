@@ -261,6 +261,7 @@ async function loadSites() {
             categories[site.id] = {
                 id: site.id,
                 name: site.name,
+                is_active: site.is_active !== 0,
                 links: site.links.split(/\r?\n/).map((l) => l.trim()).filter((l) => l)
             };
         });
@@ -282,6 +283,9 @@ function render() {
     sitesData.forEach((site, idx) => {
         const data = categories[site.id];
         const htmlName = data.name.replace(/^Kategori\s+/i, '').trim();
+        const activeText = data.is_active ? 'ON' : 'OFF';
+        const activeClass = data.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400';
+        
         const upBtn =
             idx === 0
                 ? '<div class="w-8 h-8"></div>'
@@ -300,8 +304,11 @@ function render() {
                 ${downBtn}
             </div>
             <div class="flex-1 min-w-0 py-1">
-                <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Kategori</p>
-                <h3 class="font-black text-sm text-white truncate uppercase tracking-tight">${escapeHtml(htmlName)}</h3>
+                <div class="flex items-center gap-2 mb-1">
+                    <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest">Kategori</p>
+                    <button onclick="toggleActive('${data.id}', ${!data.is_active})" class="px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${activeClass}">${activeText}</button>
+                </div>
+                <h3 class="font-black text-sm ${data.is_active ? 'text-white' : 'text-slate-500'} truncate uppercase tracking-tight">${escapeHtml(htmlName)}</h3>
                 <p class="text-[10px] text-emerald-400/90 font-bold mt-1">${data.links.length} link</p>
             </div>
             <div class="flex flex-col justify-center gap-2 shrink-0">
@@ -310,6 +317,21 @@ function render() {
             </div>`;
         container.appendChild(row);
     });
+}
+
+async function toggleActive(id, newState) {
+    try {
+        const res = await fetch(`${API_BASE}/api/sites/${id}/toggle`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify({ is_active: newState })
+        });
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+        loadSites();
+    } catch (e) {
+        toastAdmin('Gagal merubah status.');
+    }
 }
 
 async function moveUp(index) {

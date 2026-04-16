@@ -225,7 +225,17 @@ function renderSiteList() {
         return;
     }
 
-    sitesData.forEach(site => {
+    const sortedSites = [...sitesData].sort((a, b) => {
+        const da = categories[a.id];
+        const db = categories[b.id];
+        const aFin = da.lastIndex >= da.links.length && da.links.length > 0;
+        const bFin = db.lastIndex >= db.links.length && db.links.length > 0;
+        if (aFin && !bFin) return 1;
+        if (!aFin && bFin) return -1;
+        return 0; // urutan original (sort_order)
+    });
+
+    sortedSites.forEach(site => {
         const data = categories[site.id];
         const isFinished = data.lastIndex >= data.links.length && data.links.length > 0;
         const progress = data.links.length === 0
@@ -269,6 +279,8 @@ function selectCat(id, el) {
         document.getElementById('statusCard').classList.remove('hidden');
         document.getElementById('activeCatTitle').innerText = data.name;
         
+        window.clearSafeBrowsingReport(); // Clear if switching category
+
         if (data.lastIndex >= data.links.length) {
             finishPingPhase();
         } else {
@@ -393,6 +405,7 @@ async function executeOpenLink() {
             try { window.open(fullUrl, '_blank'); } catch (e) {}
         } else {
             showToast('Link redirect ke halaman blokir — dilewati.');
+            appendBlockedLinkToReport(fullUrl);
         }
 
         if (modeAuto) {
@@ -496,6 +509,29 @@ function finishJobs() {
     showToast('Antrian selesai. Mantap!');
     alert("Test Link Selesai dilakukan.");
     stopAutoPilot();
+}
+
+window.clearSafeBrowsingReport = function() {
+    document.getElementById('sbReportList').innerHTML = "";
+    document.getElementById('sbReportBox').classList.add('hidden');
+};
+
+function appendBlockedLinkToReport(url) {
+    const box = document.getElementById('sbReportBox');
+    const list = document.getElementById('sbReportList');
+    box.classList.remove('hidden');
+    
+    const div = document.createElement('div');
+    div.className = "flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2";
+    div.innerHTML = `
+        <span class="text-[10px] items-center text-slate-300 font-mono truncate flex-1">${url}</span>
+        <a href="${url}" target="_blank" rel="noopener noreferrer" class="shrink-0 p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors border border-indigo-500/20" title="Buka manual">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+        </a>
+    `;
+    list.appendChild(div);
 }
 
 // --- Provider & DNS (alias luas Telkomsel / XL / Indosat) ---
@@ -776,6 +812,9 @@ async function startPingTestDetailed() {
             const tag =
                 res.reason === 'blocked' ? 'BLOKIR' : res.reason === 'unreachable' ? 'TAK TERJANGKAU' : 'FAIL';
             line.innerHTML = `<span class="text-red-500">✖ ${cleanUrl} ${tag}</span>`;
+            
+            if (res.reason === 'blocked') appendBlockedLinkToReport(url.startsWith('h') ? url : 'https://' + url);
+
             data.skippedLinks.push(url);
             data.error++;
             failCount++;
