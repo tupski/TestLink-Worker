@@ -250,7 +250,9 @@ const SETTINGS_KEYS = new Set([
     'maintenance_mode',
     'maintenance_message',
     'about_page_title',
-    'about_page_body'
+    'about_page_body',
+    'gsb_active',
+    'gsb_api_key'
 ]);
 
 app.post('/api/auth', requireAdmin, (req, res) => {
@@ -261,12 +263,49 @@ app.get('/api/settings', (req, res) => {
     db.all(`SELECT key, value FROM kv_settings`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const settings = {};
+        const isAdmin = req.headers['x-admin-password'] === ADMIN_PASSWORD || req.headers['x-admin-password'] === process.env.ADMIN_PASSWORD;
         rows.forEach((r) => {
+            if (r.key === 'gsb_api_key' && !isAdmin) return;
             settings[r.key] = r.value;
         });
         res.json({ settings });
     });
 });
+
+function getSetting(key) {
+    return new Promise((resolve) => {
+        db.get(`SELECT value FROM kv_settings WHERE key = ?`, [key], (err, row) => {
+            resolve(row ? row.value : null);
+        });
+    });
+}
+
+async function checkWithGSB(url) {
+    try {
+        const apiKey = await getSetting('gsb_api_key');
+        const active = await getSetting('gsb_active');
+        if (active !== '1' || !apiKey) return false;
+
+        const res = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client: { clientId: "testlink", clientVersion: "1.0.0" },
+                threatInfo: {
+                    threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+                    platformTypes: ["ANY_PLATFORM"],
+                    threatEntryTypes: ["URL"],
+                    threatEntries: [{ url }]
+                }
+            })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        return data && data.matches && data.matches.length > 0;
+    } catch (e) {
+        return false;
+    }
+}
 
 app.put('/api/settings', requireAdmin, (req, res) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -281,6 +320,8 @@ app.put('/api/settings', requireAdmin, (req, res) => {
             let out = v;
             if (k === 'default_interval') out = String(Math.max(1, parseInt(String(v), 10) || 3));
             if (k === 'maintenance_mode') out = v === true || v === '1' || v === 1 ? '1' : '0';
+            if (k === 'gsb_active') out = v === true || v === '1' || v === 1 ? '1' : '0';
+            if (k === 'gsb_api_key') out = String(v).slice(0, 300);
             if (k === 'maintenance_message' || k === 'app_tagline' || k === 'app_title' || k === 'about_page_title') {
                 out = String(v).slice(0, 500);
             }
@@ -331,15 +372,24 @@ app.post('/api/check-block', async (req, res) => {
     if (!/^https?:\/\//i.test(target)) target = 'https://' + target;
     try {
         const out = await resolveUrlWithRedirects(target, 12000);
+        let gsbBlocked = false;
+        
+        // Cek GSB backend
+        if (out.ok || !out.ok) {
+            gsbBlocked = await checkWithGSB(target); 
+        }
+
         if (!out.ok) {
+            if (gsbBlocked) return res.json({ blocked: true, finalUrl: target, status: 0, fromGSB: true });
             return res.json({ blocked: false, unreachable: true, finalUrl: out.finalUrl, note: out.error });
         }
         return res.json({
-            blocked: !!out.blocked,
+            blocked: !!out.blocked || gsbBlocked,
             finalUrl: out.finalUrl,
             status: out.status,
             fromUrl: !!out.urlHit,
-            fromBody: !!out.bodyHit
+            fromBody: !!out.bodyHit,
+            fromGSB: gsbBlocked
         });
     } catch (e) {
         return res.status(500).json({ error: String(e.message || e) });

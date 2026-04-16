@@ -121,6 +121,9 @@ async function loadSettingsForm() {
         document.getElementById('setMaintenanceMsg').value = settings.maintenance_message || '';
         document.getElementById('setMaintenanceMode').checked =
             settings.maintenance_mode === '1' || settings.maintenance_mode === 'true';
+        document.getElementById('setGsbActive').checked =
+            settings.gsb_active === '1' || settings.gsb_active === 'true';
+        document.getElementById('setGsbApiKey').value = settings.gsb_api_key || '';
     } catch (e) {
         toastAdmin('Gagal muat pengaturan.');
     }
@@ -164,7 +167,9 @@ async function saveSettings() {
         app_tagline: document.getElementById('setAppTagline').value.trim(),
         default_interval: document.getElementById('setDefaultInterval').value,
         maintenance_mode: document.getElementById('setMaintenanceMode').checked ? '1' : '0',
-        maintenance_message: document.getElementById('setMaintenanceMsg').value.trim()
+        maintenance_message: document.getElementById('setMaintenanceMsg').value.trim(),
+        gsb_active: document.getElementById('setGsbActive').checked ? '1' : '0',
+        gsb_api_key: document.getElementById('setGsbApiKey').value.trim()
     };
     try {
         const res = await fetch(`${API_BASE}/api/settings`, {

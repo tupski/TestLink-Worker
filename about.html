@@ -23,6 +23,11 @@
 
     <main class="max-w-xl mx-auto px-4 py-8 flex-1 w-full">
         <div id="aboutBody" class="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-medium"></div>
+
+        <div class="mt-10 border-t border-slate-800 pt-8">
+            <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4">Changelog Riwayat Update</h2>
+            <div id="changelogBody" class="text-[11px] text-slate-500 font-mono leading-relaxed whitespace-pre-wrap">Memuat daftar perubahan...</div>
+        </div>
     </main>
 
     <footer class="site-footer mt-auto" role="contentinfo">
@@ -51,6 +56,17 @@
                 document.getElementById('aboutBody').textContent = s.about_page_body || 'Belum ada konten. Atur di Admin → tab Tentang.';
             } catch (e) {
                 document.getElementById('aboutBody').textContent = 'Gagal memuat pengaturan dari server.';
+            }
+
+            try {
+                const cl = await fetch('/CHANGELOG.md');
+                if (cl.ok) {
+                    document.getElementById('changelogBody').textContent = await cl.text();
+                } else {
+                    document.getElementById('changelogBody').textContent = 'File changelog.md tidak ditemukan pada server.';
+                }
+            } catch (e) {
+                document.getElementById('changelogBody').textContent = 'Gagal memuat changelog.';
             }
         })();
         if ('serviceWorker' in navigator) {
