@@ -156,12 +156,21 @@ async function resolveUrlWithRedirects(startUrl, maxMs) {
     }
 }
 
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
+const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_URL) || process.env.VERCEL_ENV === 'production';
 const dbFolder = isVercel ? '/tmp' : path.join(ROOT, 'data');
 if (!fs.existsSync(dbFolder)) {
     fs.mkdirSync(dbFolder, { recursive: true });
 }
 const dbPath = path.join(dbFolder, 'database.sqlite');
+
+if (isVercel && !fs.existsSync(dbPath)) {
+    const bundledDb = path.join(ROOT, 'data', 'database.sqlite');
+    if (fs.existsSync(bundledDb)) {
+        fs.copyFileSync(bundledDb, dbPath);
+        console.log('💾 Copied bundled SQLite DB to /tmp for Vercel');
+    }
+}
+
 const db = new sqlite3.Database(dbPath);
 
 console.log(`💾 Using ${isVercel ? 'Vercel /tmp' : 'Local'} SQLite Database at: ${dbPath}`);

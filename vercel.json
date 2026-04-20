@@ -11,7 +11,8 @@
           "js/**",
           "icons/**",
           "manifest.webmanifest",
-          "sw.js"
+          "sw.js",
+          "data/**"
         ]
       }
     }
