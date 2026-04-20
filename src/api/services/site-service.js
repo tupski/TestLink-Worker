@@ -48,16 +48,20 @@ class SiteService {
      * Membuat situs baru
      * @param {string} name - Nama situs
      * @param {string} links - Links (dipisahkan newline)
+     * @param {Object} settings - Settings kategori (operation_mode, manual_validation, custom_interval)
      * @returns {Promise<Object>} Object situs yang dibuat
      */
-    static async createSite(name, links) {
+    static async createSite(name, links, settings = {}) {
         const id = uuidv4();
         const now = getNowWIB();
+        const operationMode = settings.operation_mode !== undefined ? (settings.operation_mode ? 1 : 0) : 0;
+        const manualValidation = settings.manual_validation !== undefined ? (settings.manual_validation ? 1 : 0) : 0;
+        const customInterval = settings.custom_interval !== undefined ? parseInt(settings.custom_interval, 10) : null;
 
         return new Promise((resolve, reject) => {
             databaseService.getDb().run(
-                `INSERT INTO sites (id, name, links, created_at) VALUES (?, ?, ?, ?)`, 
-                [id, name, links, now], 
+                `INSERT INTO sites (id, name, links, created_at, operation_mode, manual_validation, custom_interval) VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+                [id, name, links, now, operationMode, manualValidation, customInterval], 
                 (err) => {
                     if (err) return reject(err);
 
@@ -75,7 +79,7 @@ class SiteService {
                         ]
                     );
 
-                    resolve({ id, name, links });
+                    resolve({ id, name, links, operation_mode: operationMode, manual_validation: manualValidation, custom_interval: customInterval });
                 }
             );
         });
@@ -86,9 +90,10 @@ class SiteService {
      * @param {string} siteId - ID situs
      * @param {string} name - Nama situs baru
      * @param {string} links - Links baru
+     * @param {Object} settings - Settings kategori (operation_mode, manual_validation, custom_interval)
      * @returns {Promise<boolean>} True jika berhasil
      */
-    static async updateSite(siteId, name, links) {
+    static async updateSite(siteId, name, links, settings = {}) {
         const now = getNowWIB();
 
         return new Promise((resolve, reject) => {
@@ -113,9 +118,38 @@ class SiteService {
                     removed: oldLinks.filter((l) => !newLinks.includes(l))
                 });
 
+                // Prepare settings updates
+                const setClauses = ['name = ?', 'links = ?'];
+                const params = [name, links, siteId];
+                
+                if (settings.operation_mode !== undefined) {
+                    setClauses.push('operation_mode = ?');
+                    params.push(settings.operation_mode ? 1 : 0);
+                }
+                if (settings.manual_validation !== undefined) {
+                    setClauses.push('manual_validation = ?');
+                    params.push(settings.manual_validation ? 1 : 0);
+                }
+                if (settings.custom_interval !== undefined) {
+                    setClauses.push('custom_interval = ?');
+                    params.push(settings.custom_interval ? parseInt(settings.custom_interval, 10) : null);
+                }
+                
+                // If manual_validation is enabled but operation_mode is auto (1), force disable manual_validation
+                if (settings.operation_mode === 1 && settings.manual_validation === undefined) {
+                    // Check current state
+                    setClauses.push('manual_validation = 0');
+                } else if (settings.operation_mode === 1 && settings.manual_validation === true) {
+                    // Override - cannot enable manual validation in auto mode
+                    setClauses.push('manual_validation = 0');
+                }
+                
+                // Re-add siteId for WHERE clause
+                params[params.length - 1] = siteId;
+                
                 databaseService.getDb().run(
-                    `UPDATE sites SET name = ?, links = ? WHERE id = ?`, 
-                    [name, links, siteId], 
+                    `UPDATE sites SET ${setClauses.join(', ')} WHERE id = ?`, 
+                    params, 
                     (err2) => {
                         if (err2) return reject(err2);
 

@@ -26,8 +26,9 @@ router.get('/', async (req, res) => {
  */
 router.post('/', AuthMiddleware.requireAdmin, async (req, res) => {
     try {
-        const { name, links } = req.body;
-        const result = await SiteService.createSite(name, links);
+        const { name, links, operation_mode, manual_validation, custom_interval } = req.body;
+        const settings = { operation_mode, manual_validation, custom_interval };
+        const result = await SiteService.createSite(name, links, settings);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -40,8 +41,9 @@ router.post('/', AuthMiddleware.requireAdmin, async (req, res) => {
  */
 router.put('/:id', AuthMiddleware.requireAdmin, async (req, res) => {
     try {
-        const { name, links } = req.body;
-        await SiteService.updateSite(req.params.id, name, links);
+        const { name, links, operation_mode, manual_validation, custom_interval } = req.body;
+        const settings = { operation_mode, manual_validation, custom_interval };
+        await SiteService.updateSite(req.params.id, name, links, settings);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

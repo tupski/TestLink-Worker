@@ -60,7 +60,9 @@ const SETTINGS_KEYS = new Set([
     'about_page_title',
     'about_page_body',
     'gsb_active',
-    'gsb_api_key'
+    'gsb_api_key',
+    'seo_visibility',
+    'robot_permission'
 ]);
 
 // Default settings values
@@ -71,7 +73,9 @@ const DEFAULT_SETTINGS = [
     ['maintenance_mode', '0'],
     ['maintenance_message', ''],
     ['about_page_title', 'Tentang Test Link'],
-    ['about_page_body', 'Test Link membantu tim menjalankan daftar URL dengan progres per perangkat, cek koneksi/DNS, dan riwayat perubahan dari admin.\n\nGunakan mode fokus-tab untuk validasi manual, atau mode jeda otomatis untuk throughput lebih tinggi di tab yang sama.']
+    ['about_page_body', 'Test Link membantu tim menjalankan daftar URL dengan progres per perangkat, cek koneksi/DNS, dan riwayat perubahan dari admin.\n\nGunakan mode fokus-tab untuk validasi manual, atau mode jeda otomatis untuk throughput lebih tinggi di tab yang sama.'],
+    ['seo_visibility', '1'],
+    ['robot_permission', 'index,follow']
 ];
 
 module.exports = {

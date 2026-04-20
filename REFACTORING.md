@@ -161,7 +161,7 @@ router.get('/', async (req, res) => {
 
 ---
 
-## 🔧 Konfigurasi
+## Konfigurasi
 
 ### **Environment Variables**
 - `PORT` - Port server (default: 3000)
@@ -175,7 +175,7 @@ router.get('/', async (req, res) => {
 
 ---
 
-## 📚 Resources
+## Resources
 
 - [Express.js Documentation](https://expressjs.com/)
 - [SQLite3 Documentation](https://www.npmjs.com/package/sqlite3)
@@ -183,7 +183,7 @@ router.get('/', async (req, res) => {
 
 ---
 
-## 🤝 Kontribusi
+## Kontribusi
 
 1. Buat branch baru untuk fitur/fix
 2. Ikuti struktur folder yang sudah ada
@@ -192,6 +192,6 @@ router.get('/', async (req, res) => {
 
 ---
 
-## 📄 License
+## License
 
 ISC

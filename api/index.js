@@ -29,6 +29,7 @@ const historyRoutes = require('../src/api/routes/history');
 const checkBlockRoutes = require('../src/api/routes/check-block');
 const progressRoutes = require('../src/api/routes/progress');
 const statsRoutes = require('../src/api/routes/stats');
+const backupRoutes = require('../src/api/routes/backup');
 
 // Initialize Express app
 const app = express();
@@ -59,6 +60,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/check-block', checkBlockRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/admin/stats', statsRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Static files & redirects
 app.get(['/admin', '/admin/'], (req, res) => res.redirect(302, '/admin.html'));

@@ -6,6 +6,7 @@ let categories = {};
 let editingSiteId = null;
 let sessionPass = sessionStorage.getItem('__admin_pass') || null;
 const API_BASE = window.location.origin;
+let backupInfoLoaded = false;
 
 /**
  * Format timestamp WIB dari string format "YYYY-MM-DD HH:mm:ss" ke tampilan lokal yang readable
@@ -70,6 +71,7 @@ function showTab(tabId) {
     if (tabId === 'settings') loadSettingsForm();
     if (tabId === 'history') loadServerHistoryTable();
     if (tabId === 'about') loadAboutForm();
+    if (tabId === 'backup') loadBackupInfo();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -540,5 +542,327 @@ async function deleteSite(siteId) {
         loadStats();
     } catch (err) {
         toastAdmin(err.message);
+    }
+}
+
+// ==========================================
+// Category Settings Functions
+// ==========================================
+
+function updateManualValidationState() {
+    const operationMode = document.getElementById('siteOperationMode').checked;
+    const manualValRow = document.getElementById('manualValidationRow');
+    const manualValInput = document.getElementById('siteManualValidation');
+    
+    if (operationMode) {
+        // Auto mode - disable manual validation
+        manualValRow.style.opacity = '0.4';
+        manualValRow.style.pointerEvents = 'none';
+        manualValInput.checked = false;
+    } else {
+        manualValRow.style.opacity = '1';
+        manualValRow.style.pointerEvents = 'auto';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const opModeCheckbox = document.getElementById('siteOperationMode');
+    if (opModeCheckbox) {
+        opModeCheckbox.addEventListener('change', updateManualValidationState);
+    }
+});
+
+function editSite(siteId) {
+    if (editingSiteId && editingSiteId !== siteId) {
+        toastAdmin('Selesaikan atau batalkan edit yang aktif dulu.');
+        return;
+    }
+    const data = categories[siteId];
+    editingSiteId = siteId;
+    document.getElementById('siteNameInput').value = data.name;
+    document.getElementById('siteLinksInput').value = data.links.join('\n');
+    
+    // Set category-specific settings
+    document.getElementById('siteOperationMode').checked = data.operation_mode === 1;
+    document.getElementById('siteManualValidation').checked = data.manual_validation === 1;
+    document.getElementById('siteCustomInterval').value = data.custom_interval || '';
+    
+    // Update manual validation state based on operation mode
+    updateManualValidationState();
+    
+    const btn = document.getElementById('saveBtn');
+    btn.innerText = 'Update skema';
+    btn.className =
+        'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-95';
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+    showTab('sites');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function saveSiteManual() {
+    const name = document.getElementById('siteNameInput').value.trim();
+    const rawLinks = document.getElementById('siteLinksInput').value.trim();
+    const btn = document.getElementById('saveBtn');
+
+    if (!name || !rawLinks) return toastAdmin('Nama & link wajib diisi, ya.');
+
+    const linksArr = rawLinks
+        .split(/\r?\n/)
+        .map((line) => {
+            let l = line.trim();
+            if (!l) return null;
+            if (!l.startsWith('http://') && !l.startsWith('https://')) l = 'https://' + l;
+            return l;
+        })
+        .filter((l) => l !== null);
+
+    if (linksArr.length === 0) return toastAdmin('Minimal satu link valid.');
+
+    // Get category settings
+    const operationMode = document.getElementById('siteOperationMode').checked ? 1 : 0;
+    const manualValidation = document.getElementById('siteManualValidation').checked ? 1 : 0;
+    const customIntervalValue = document.getElementById('siteCustomInterval').value.trim();
+    const customInterval = customIntervalValue ? parseInt(customIntervalValue, 10) : null;
+
+    btn.disabled = true;
+    btn.innerText = 'Menyimpan…';
+
+    try {
+        if (editingSiteId) {
+            const res = await fetch(`${API_BASE}/api/sites/${editingSiteId}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ 
+                    name, 
+                    links: linksArr.join('\n'),
+                    operation_mode: operationMode,
+                    manual_validation: manualValidation,
+                    custom_interval: customInterval
+                })
+            });
+            const d = await res.json();
+            if (d.error) throw new Error(d.error);
+            cancelEdit();
+        } else {
+            const res = await fetch(`${API_BASE}/api/sites`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ 
+                    name, 
+                    links: linksArr.join('\n'),
+                    operation_mode: operationMode,
+                    manual_validation: manualValidation,
+                    custom_interval: customInterval
+                })
+            });
+            const d = await res.json();
+            if (d.error) throw new Error(d.error);
+            document.getElementById('siteNameInput').value = '';
+            document.getElementById('siteLinksInput').value = '';
+            document.getElementById('siteOperationMode').checked = false;
+            document.getElementById('siteManualValidation').checked = false;
+            document.getElementById('siteCustomInterval').value = '';
+        }
+        toastAdmin('Tersimpan.');
+        loadSites();
+        loadStats();
+    } catch (err) {
+        toastAdmin('Error: ' + err.message);
+        if (String(err.message).includes('Password') || String(err.message).includes('Ditolak')) {
+            sessionStorage.removeItem('__admin_pass');
+            window.location.reload();
+        }
+    } finally {
+        btn.disabled = false;
+        if (editingSiteId) {
+            btn.innerText = 'Update skema';
+        } else {
+            btn.innerText = 'Simpan ke server';
+            btn.className =
+                'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-95 shadow-indigo-900/40';
+        }
+    }
+}
+
+function cancelEdit() {
+    editingSiteId = null;
+    document.getElementById('siteNameInput').value = '';
+    document.getElementById('siteLinksInput').value = '';
+    document.getElementById('siteOperationMode').checked = false;
+    document.getElementById('siteManualValidation').checked = false;
+    document.getElementById('siteCustomInterval').value = '';
+    document.getElementById('cancelEditBtn').classList.add('hidden');
+    const btn = document.getElementById('saveBtn');
+    btn.innerText = 'Simpan ke server';
+    btn.className =
+        'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-95 shadow-indigo-900/40';
+    document.getElementById('manualValidationRow').style.opacity = '1';
+    document.getElementById('manualValidationRow').style.pointerEvents = 'auto';
+}
+
+// ==========================================
+// Backup & Restore Functions
+// ==========================================
+
+async function loadBackupInfo() {
+    try {
+        const res = await fetch(`${API_BASE}/api/backup/info`, { headers: getHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        document.getElementById('backupDbType').textContent = data.database_type || '—';
+        document.getElementById('backupSiteCount').textContent = data.stats?.sites || 0;
+        document.getElementById('backupHistoryCount').textContent = data.stats?.history || 0;
+        
+        const recentChanges = data.stats?.recent_changes_24h || 0;
+        const recentEl = document.getElementById('backupRecentChanges');
+        recentEl.textContent = recentChanges;
+        recentEl.className = recentChanges > 0 ? 'text-emerald-400 font-bold' : 'text-white font-bold';
+        
+        backupInfoLoaded = true;
+    } catch (e) {
+        // Silent fail for backup info
+    }
+}
+
+async function downloadBackup() {
+    try {
+        toastAdmin('Menyiapkan backup...');
+        const res = await fetch(`${API_BASE}/api/backup/download`, { headers: getHeaders() });
+        if (!res.ok) throw new Error('Gagal download backup');
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `testlink-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toastAdmin('Backup berhasil didownload!');
+    } catch (e) {
+        toastAdmin('Gagal download backup: ' + e.message);
+    }
+}
+
+async function handleRestoreFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (!confirm('Restore akan MENIMPA semua data yang ada. Yakin ingin melanjutkan?')) {
+        input.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const backupData = JSON.parse(e.target.result);
+            
+            // Validate backup format
+            if (!backupData.version || !backupData.tables) {
+                throw new Error('Format file backup tidak valid');
+            }
+            
+            const statusDiv = document.getElementById('restoreStatus');
+            const statusText = document.getElementById('restoreStatusText');
+            statusDiv.classList.remove('hidden');
+            statusText.textContent = 'Memproses restore...';
+            
+            const res = await fetch(`${API_BASE}/api/backup/restore`, {
+                method: 'POST',
+                headers: {
+                    ...getHeaders(),
+                },
+                body: JSON.stringify(backupData)
+            });
+            
+            const result = await res.json();
+            
+            if (result.success) {
+                statusText.innerHTML = `
+                    <span class="text-emerald-400">✓ Restore berhasil!</span><br>
+                    <span class="text-slate-500">
+                        Sites: ${result.restored?.sites || 0} | 
+                        Progress: ${result.restored?.progress || 0} | 
+                        History: ${result.restored?.history || 0} | 
+                        Settings: ${result.restored?.settings || 0}
+                    </span>
+                `;
+                toastAdmin('Database berhasil di-restore!');
+                loadSites();
+                loadStats();
+                loadBackupInfo();
+            } else {
+                throw new Error(result.error || 'Restore gagal');
+            }
+        } catch (err) {
+            const statusDiv = document.getElementById('restoreStatus');
+            const statusText = document.getElementById('restoreStatusText');
+            statusDiv.classList.remove('hidden');
+            statusText.innerHTML = `<span class="text-red-400">✗ ${err.message}</span>`;
+            toastAdmin('Gagal restore: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+// ==========================================
+// SEO Settings
+// ==========================================
+
+async function loadSettingsForm() {
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        const { settings } = await res.json();
+        document.getElementById('setAppTitle').value = settings.app_title || '';
+        document.getElementById('setAppTagline').value = settings.app_tagline || '';
+        document.getElementById('setDefaultInterval').value = settings.default_interval || '3';
+        document.getElementById('setMaintenanceMsg').value = settings.maintenance_message || '';
+        document.getElementById('setMaintenanceMode').checked =
+            settings.maintenance_mode === '1' || settings.maintenance_mode === 'true';
+        document.getElementById('setGsbActive').checked =
+            settings.gsb_active === '1' || settings.gsb_active === 'true';
+        document.getElementById('setGsbApiKey').value = settings.gsb_api_key || '';
+        
+        // SEO Settings
+        document.getElementById('setSeoVisibility').checked =
+            settings.seo_visibility === '1' || settings.seo_visibility === 'true';
+        document.getElementById('setRobotPermission').value = settings.robot_permission || 'index,follow';
+    } catch (e) {
+        toastAdmin('Gagal muat pengaturan.');
+    }
+}
+
+async function saveSettings() {
+    const body = {
+        app_title: document.getElementById('setAppTitle').value.trim(),
+        app_tagline: document.getElementById('setAppTagline').value.trim(),
+        default_interval: document.getElementById('setDefaultInterval').value,
+        maintenance_mode: document.getElementById('setMaintenanceMode').checked ? '1' : '0',
+        maintenance_message: document.getElementById('setMaintenanceMsg').value.trim(),
+        gsb_active: document.getElementById('setGsbActive').checked ? '1' : '0',
+        gsb_api_key: document.getElementById('setGsbApiKey').value.trim(),
+        seo_visibility: document.getElementById('setSeoVisibility').checked ? '1' : '0',
+        robot_permission: document.getElementById('setRobotPermission').value
+    };
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+        toastAdmin('Pengaturan tersimpan. Refresh halaman worker buat lihat judul baru.');
+    } catch (e) {
+        toastAdmin('Gagal simpan: ' + e.message);
+        if (String(e.message).includes('Password') || String(e.message).includes('403')) {
+            sessionStorage.removeItem('__admin_pass');
+            window.location.reload();
+        }
     }
 }
