@@ -20,7 +20,7 @@ export default {
             .replace(/\/$/, '');
         if (!base.startsWith('http')) {
             return new Response(
-                'Worker: set secret BACKEND_URL = https://<project>.vercel.app (lihat cloudflare/worker.js)',
+                'Worker: set secret BACKEND_URL = https://testlink-worker.vercel.app',
                 { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } }
             );
         }
