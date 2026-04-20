@@ -7,6 +7,44 @@ let editingSiteId = null;
 let sessionPass = sessionStorage.getItem('__admin_pass') || null;
 const API_BASE = window.location.origin;
 
+/**
+ * Format timestamp WIB dari string format "YYYY-MM-DD HH:mm:ss" ke tampilan lokal yang readable
+ */
+function formatWIBTimestamp(createdAtStr) {
+    if (!createdAtStr) return '-';
+    
+    try {
+        // Parse string WIB format "2024-04-20 15:30:45"
+        const parts = createdAtStr.split(' ');
+        if (parts.length !== 2) return createdAtStr;
+        
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        
+        if (dateParts.length !== 3 || timeParts.length !== 3) return createdAtStr;
+        
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const hour = parseInt(timeParts[0], 10);
+        const minute = parseInt(timeParts[1], 10);
+        const second = parseInt(timeParts[2], 10);
+        
+        // Buat date object dari komponen WIB (anggap sebagai UTC untuk menghindari timezone shift)
+        const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        
+        // Format: "20 Apr, 15:30"
+        return date.toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return createdAtStr;
+    }
+}
+
 function getHeaders() {
     return {
         'Content-Type': 'application/json',
@@ -206,12 +244,7 @@ async function loadServerHistoryTable() {
         rows.slice(0, 40).forEach((item) => {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-slate-800/80 hover:bg-slate-900/50';
-            const when = new Date(item.created_at).toLocaleString('id-ID', {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            const when = formatWIBTimestamp(item.created_at);
             tr.innerHTML = `
                 <td class="px-4 py-3 text-[10px] font-black uppercase text-indigo-400">${item.action}</td>
                 <td class="px-4 py-3 text-xs font-bold text-white truncate max-w-[8rem]">${escapeHtml(item.site_name)}</td>

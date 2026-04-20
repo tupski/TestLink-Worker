@@ -183,7 +183,7 @@ db.serialize(() => {
         id TEXT PRIMARY KEY,
         name TEXT,
         links TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME
     )`, (err) => {
         if (!err) {
             db.run(`ALTER TABLE sites ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
@@ -206,7 +206,7 @@ db.serialize(() => {
         site_name TEXT,
         diff_summary TEXT,
         diff_details TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME
     )`, (err) => {
         if (!err) {
             db.run(`ALTER TABLE history ADD COLUMN diff_details TEXT`, () => {});
@@ -234,6 +234,19 @@ db.serialize(() => {
         });
     });
 });
+
+/** Fungsi untuk mendapatkan waktu saat ini dalam zona WIB (UTC+7) */
+function getNowWIB() {
+    const now = new Date();
+    const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    const year = wibTime.getFullYear();
+    const month = String(wibTime.getMonth() + 1).padStart(2, '0');
+    const day = String(wibTime.getDate()).padStart(2, '0');
+    const hours = String(wibTime.getHours()).padStart(2, '0');
+    const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+    const seconds = String(wibTime.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
 
 function uuidv4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -451,18 +464,20 @@ app.get('/api/history', (req, res) => {
 app.post('/api/sites', requireAdmin, (req, res) => {
     const { name, links } = req.body;
     const id = uuidv4();
+    const now = getNowWIB();
 
-    db.run(`INSERT INTO sites (id, name, links) VALUES (?, ?, ?)`, [id, name, links], (err) => {
+    db.run(`INSERT INTO sites (id, name, links, created_at) VALUES (?, ?, ?, ?)`, [id, name, links, now], (err) => {
         if (err) return res.status(500).json({ error: err.message });
 
         const count = links.split('\n').filter((l) => l.trim()).length;
         db.run(
-            `INSERT INTO history (action, site_name, diff_summary, diff_details) VALUES (?, ?, ?, ?)`,
+            `INSERT INTO history (action, site_name, diff_summary, diff_details, created_at) VALUES (?, ?, ?, ?, ?)`,
             [
                 'ADD',
                 name,
                 `Memasukkan database baru dengan ${count} link.`,
-                JSON.stringify({ added: links.split('\n').filter((l) => l.trim()), removed: [] })
+                JSON.stringify({ added: links.split('\n').filter((l) => l.trim()), removed: [] }),
+                now
             ]
         );
 
@@ -494,6 +509,7 @@ app.put('/api/sites/:id/toggle', requireAdmin, (req, res) => {
 
 app.put('/api/sites/:id', requireAdmin, (req, res) => {
     const { name, links } = req.body;
+    const now = getNowWIB();
 
     db.get(`SELECT * FROM sites WHERE id = ?`, [req.params.id], (err, row) => {
         if (err || !row) return res.status(500).json({ error: err ? err.message : 'Tidak ditemukan' });
@@ -519,8 +535,8 @@ app.put('/api/sites/:id', requireAdmin, (req, res) => {
             if (err2) return res.status(500).json({ error: err2.message });
 
             db.run(
-                `INSERT INTO history (action, site_name, diff_summary, diff_details) VALUES (?, ?, ?, ?)`,
-                ['EDIT', name, diff_summary, diff_details]
+                `INSERT INTO history (action, site_name, diff_summary, diff_details, created_at) VALUES (?, ?, ?, ?, ?)`,
+                ['EDIT', name, diff_summary, diff_details, now]
             );
 
             res.json({ success: true });
@@ -533,16 +549,18 @@ app.delete('/api/sites/:id', requireAdmin, (req, res) => {
         if (err || !row) return res.status(500).json({ error: 'Situs tidak ditemukan' });
 
         const name = row.name;
+        const now = getNowWIB();
         db.serialize(() => {
             db.run(`DELETE FROM sites WHERE id = ?`, [req.params.id]);
             db.run(`DELETE FROM progress WHERE site_id = ?`, [req.params.id]);
             db.run(
-                `INSERT INTO history (action, site_name, diff_summary, diff_details) VALUES (?, ?, ?, ?)`,
+                `INSERT INTO history (action, site_name, diff_summary, diff_details, created_at) VALUES (?, ?, ?, ?, ?)`,
                 [
                     'DELETE',
                     name,
                     'Menghapus database situs beserta seluruh riwayat progressnya.',
-                    JSON.stringify({ added: [], removed: [] })
+                    JSON.stringify({ added: [], removed: [] }),
+                    now
                 ]
             );
         });
@@ -580,6 +598,16 @@ app.get('/favicon.ico', (req, res) => {
     }
     res.status(204).end();
 });
+
+app.get('/CHANGELOG.md', (req, res) => {
+    const changelogPath = path.join(ROOT, 'CHANGELOG.md');
+    if (fs.existsSync(changelogPath)) {
+        res.type('text/markdown; charset=utf-8');
+        return res.sendFile(changelogPath);
+    }
+    res.status(404).json({ error: 'CHANGELOG.md tidak ditemukan' });
+});
+
 app.get('/', (req, res, next) => {
     const indexPath = path.join(ROOT, 'index.html');
     if (fs.existsSync(indexPath)) {

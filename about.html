@@ -62,12 +62,13 @@
             try {
                 const cl = await fetch('/CHANGELOG.md');
                 if (cl.ok) {
-                    document.getElementById('changelogBody').textContent = await cl.text();
+                    const text = await cl.text();
+                    document.getElementById('changelogBody').textContent = text;
                 } else {
-                    document.getElementById('changelogBody').textContent = 'File changelog.md tidak ditemukan pada server.';
+                    document.getElementById('changelogBody').textContent = 'Changelog tidak tersedia (HTTP ' + cl.status + ')';
                 }
             } catch (e) {
-                document.getElementById('changelogBody').textContent = 'Gagal memuat changelog.';
+                document.getElementById('changelogBody').textContent = 'Gagal memuat changelog: ' + e.message;
             }
         })();
         if ('serviceWorker' in navigator) {

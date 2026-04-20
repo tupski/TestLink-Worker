@@ -1,6 +1,22 @@
 # 📜 Changelog
 
-Semua perubahan penting pada proyek **LinkFlow** akan didokumentasikan di file ini. Format ini didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Semua perubahan penting pada proyek **Test Link** akan didokumentasikan di file ini. Format ini didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [0.9.220426] - 2026-04-20
+### Added
+- **WIB Timezone Support**: Implementasi zona waktu WIB (UTC+7) untuk semua timestamp di server dan client.
+- **Proper Timestamp Formatting**: Fungsi `getNowWIB()` di backend dan `formatWIBTimestamp()` di frontend untuk konsistensi timezone.
+
+### Changed
+- **Database Timestamps**: Mengubah dari `CURRENT_TIMESTAMP` (UTC) ke explicit WIB timestamps menggunakan `getNowWIB()`.
+- **History Display**: Riwayat perubahan data sekarang menampilkan waktu dalam WIB yang akurat sesuai zona waktu lokal.
+- **Timestamp Format**: Format penyimpanan waktu di database menjadi `YYYY-MM-DD HH:mm:ss` (WIB).
+
+### Fixed
+- Sinkronisasi waktu server dengan waktu lokal pengguna yang menggunakan zona WIB.
+- Ketidaksesuaian timestamp antara waktu update server dan tampilan di riwayat.
+
+---
 
 ## [0.8.442106] - 2026-04-12
 ### Added
