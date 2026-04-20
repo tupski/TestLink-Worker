@@ -47,7 +47,60 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 
 ---
 
-## Akses Publik (Cloudflare Tunnel)
+## Docker Support
+
+Project ini mendukung containerisasi menggunakan Docker untuk kemudahan development dan deployment.
+
+### Persiapan
+
+1. **Instal Docker**: Pastikan Docker Desktop terinstal di sistem Anda.
+2. **File Environment**: Buat file `.env` di root project berdasarkan kebutuhan aplikasi (jangan commit file ini ke Git).
+
+### Development Mode (dengan Hot Reload)
+
+1. **Build dan Jalankan**:
+   ```bash
+   docker-compose up --build
+   ```
+2. **Akses**:
+   - Dashboard: `http://localhost:3000`
+   - Admin Panel: `http://localhost:3000/admin.html`
+
+3. **Stop Container**:
+   ```bash
+   docker-compose down
+   ```
+
+4. **Melihat Logs**:
+   ```bash
+   docker-compose logs -f app
+   ```
+
+### Production Mode
+
+1. **Build Image**:
+   ```bash
+   docker build -t testlink .
+   ```
+
+2. **Jalankan Container**:
+   ```bash
+   docker run -p 3000:3000 --env-file .env testlink
+   ```
+
+3. **Stop Container**:
+   ```bash
+   docker stop <container_id>
+   ```
+
+### Catatan
+
+- Port 3000 di-mapping ke host untuk akses dari Windows.
+- Volume mount digunakan di development mode untuk hot reload dengan nodemon.
+- Database SQLite disimpan secara lokal di container.
+- Jika menggunakan MySQL, uncomment service `db` dan `phpmyadmin` di `docker-compose.yml`.
+
+---
 
 Gunakan skrip pembantu `BukaTunnel.bat` untuk mengonlinekan server lokal Anda secara instan menggunakan Cloudflare Tunnel:
 
