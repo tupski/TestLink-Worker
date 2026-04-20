@@ -6,13 +6,23 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./api:/app/api
+      - ./js:/app/js
+      - ./css:/app/css
+      - ./data:/app/data
+      - ./icons:/app/icons
+      - ./index.html:/app/index.html
+      - ./about.html:/app/about.html
+      - ./admin.html:/app/admin.html
+      - ./403.html:/app/403.html
+      - ./404.html:/app/404.html
+      - ./500.html:/app/500.html
+      - ./manifest.webmanifest:/app/manifest.webmanifest
+      - ./sw.js:/app/sw.js
+      - ./vercel.json:/app/vercel.json
     environment:
       - NODE_ENV=development
     command: npm run dev
-    depends_on:
-      - db  # Jika ada database, tapi di sini SQLite lokal
 
   # Jika project menggunakan MySQL, uncomment dan sesuaikan:
   # db:

@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install system dependencies for native modules
+RUN apk add --no-cache build-base python3
+
+# Install dependencies (all for development, production only for prod)
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -19,7 +22,7 @@ RUN adduser -S nodejs -u 1001
 
 # Change ownership of app directory
 RUN chown -R nodejs:nodejs /app
-USER nodejs
+# USER nodejs
 
 # Expose port
 EXPOSE 3000
