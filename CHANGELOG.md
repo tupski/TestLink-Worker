@@ -2,6 +2,18 @@
 
 Semua perubahan penting pada proyek **Test Link** akan didokumentasikan di file ini. Format ini didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+### Added
+- **Docker Support**: Implementasi containerisasi lengkap dengan Dockerfile production-ready, docker-compose untuk development dengan hot reload, dan instruksi deployment.
+- **Hot Reload Development**: Integrasi Nodemon di Docker untuk development yang lebih efisien dengan auto-restart saat file berubah.
+- **Environment Configuration**: Setup file `.env` untuk konfigurasi environment variables yang aman.
+
+### Changed
+- **Build Process**: Menambahkan script `dev` untuk development mode dengan Nodemon.
+- **Dependencies**: Menambahkan `nodemon` sebagai dev dependency untuk hot reload.
+
+---
+
 ## [0.9.220426] - 2026-04-20
 ### Added
 - **WIB Timezone Support**: Implementasi zona waktu WIB (UTC+7) untuk semua timestamp di server dan client.

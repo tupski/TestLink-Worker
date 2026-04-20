@@ -7,6 +7,7 @@ services:
       - "3000:3000"
     volumes:
       - ./api:/app/api
+      - ./src:/app/src
       - ./js:/app/js
       - ./css:/app/css
       - ./data:/app/data
