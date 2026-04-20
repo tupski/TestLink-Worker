@@ -156,7 +156,7 @@ async function resolveUrlWithRedirects(startUrl, maxMs) {
     }
 }
 
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
 const dbFolder = isVercel ? '/tmp' : path.join(ROOT, 'data');
 if (!fs.existsSync(dbFolder)) {
     fs.mkdirSync(dbFolder, { recursive: true });
