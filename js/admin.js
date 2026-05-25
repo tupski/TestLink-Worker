@@ -7,6 +7,20 @@ let editingSiteId = null;
 let sessionPass = sessionStorage.getItem('__admin_pass') || null;
 const API_BASE = window.location.origin;
 
+// Validation state
+const validationState = {
+    siteName: { valid: false, message: '' },
+    siteLinks: { valid: false, message: '' }
+};
+
+// Pagination state for history table
+const historyPagination = {
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0
+};
+
 /**
  * Format timestamp WIB dari string format "YYYY-MM-DD HH:mm:ss" ke tampilan lokal yang readable
  */
@@ -40,6 +54,48 @@ function formatWIBTimestamp(createdAtStr) {
             hour: '2-digit',
             minute: '2-digit'
         });
+    } catch (e) {
+        return createdAtStr;
+    }
+}
+
+/**
+ * Format timestamp as relative time (e.g., "2 hours ago")
+ */
+function formatRelativeTime(createdAtStr) {
+    if (!createdAtStr) return '-';
+    
+    try {
+        const parts = createdAtStr.split(' ');
+        if (parts.length !== 2) return createdAtStr;
+        
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        
+        if (dateParts.length !== 3 || timeParts.length !== 3) return createdAtStr;
+        
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const hour = parseInt(timeParts[0], 10);
+        const minute = parseInt(timeParts[1], 10);
+        const second = parseInt(timeParts[2], 10);
+        
+        const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+        
+        if (diffSec < 60) return 'Baru saja';
+        if (diffMin < 60) return `${diffMin} menit lalu`;
+        if (diffHour < 24) return `${diffHour} jam lalu`;
+        if (diffDay < 7) return `${diffDay} hari lalu`;
+        if (diffDay < 30) return `${Math.floor(diffDay / 7)} minggu lalu`;
+        if (diffDay < 365) return `${Math.floor(diffDay / 30)} bulan lalu`;
+        return `${Math.floor(diffDay / 365)} tahun lalu`;
     } catch (e) {
         return createdAtStr;
     }
@@ -87,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSites();
         showTab('dash');
     }
+    
+    // Setup form validation listeners
+    setupFormValidation();
 });
 
 async function resolvePwd() {
@@ -114,10 +173,21 @@ function rejectPwd() {
     window.location.href = '/';
 }
 
-function toastAdmin(msg) {
+function toastAdmin(msg, type = 'info') {
     const t = document.getElementById('adminToast');
     if (!t) return alert(msg);
     t.textContent = msg;
+    
+    // Apply styling based on type
+    t.classList.remove('border-indigo-500/40', 'border-emerald-500/40', 'border-red-500/40');
+    if (type === 'success') {
+        t.classList.add('border-emerald-500/40');
+    } else if (type === 'error') {
+        t.classList.add('border-red-500/40');
+    } else {
+        t.classList.add('border-indigo-500/40');
+    }
+    
     t.classList.remove('hidden', 'opacity-0', 'translate-y-2');
     clearTimeout(toastAdmin._tm);
     toastAdmin._tm = setTimeout(() => {
@@ -126,26 +196,401 @@ function toastAdmin(msg) {
     }, 3200);
 }
 
-async function loadStats() {
+/**
+ * Show confirmation modal
+ */
+function showConfirmDialog(message, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const messageEl = document.getElementById('confirmMessage');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    
+    if (!modal) {
+        // Fallback to native confirm
+        if (confirm(message)) onConfirm();
+        return;
+    }
+    
+    messageEl.textContent = message;
+    modal.classList.remove('hidden');
+    
+    const handleConfirm = () => {
+        modal.classList.add('hidden');
+        onConfirm();
+        cleanup();
+    };
+    
+    const handleCancel = () => {
+        modal.classList.add('hidden');
+        cleanup();
+    };
+    
+    const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+    
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+}
+
+/**
+ * Show loading skeleton for stats
+ */
+function showStatsLoading() {
     const elK = document.getElementById('statSites');
     const elL = document.getElementById('statLinks');
     const elH = document.getElementById('statHistory');
-    if (elK) elK.textContent = '…';
-    if (elL) elL.textContent = '…';
-    if (elH) elH.textContent = '…';
+    if (elK) elK.innerHTML = '<div class="animate-pulse bg-slate-700 h-6 w-8 mx-auto rounded"></div>';
+    if (elL) elL.innerHTML = '<div class="animate-pulse bg-slate-700 h-6 w-8 mx-auto rounded"></div>';
+    if (elH) elH.innerHTML = '<div class="animate-pulse bg-slate-700 h-6 w-8 mx-auto rounded"></div>';
+}
+
+/**
+ * Validate site name input
+ */
+function validateSiteName(value) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return { valid: false, message: 'Nama kategori wajib diisi' };
+    }
+    if (trimmed.length < 3) {
+        return { valid: false, message: 'Minimal 3 karakter' };
+    }
+    if (trimmed.length > 100) {
+        return { valid: false, message: 'Maksimal 100 karakter' };
+    }
+    return { valid: true, message: 'Valid ✓' };
+}
+
+/**
+ * Validate and count links
+ */
+function validateLinks(value) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return { valid: false, message: 'Minimal satu link diperlukan', count: 0 };
+    }
+    
+    const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    const validLinks = lines.filter(line => {
+        // Basic URL validation
+        return line.length > 0;
+    });
+    
+    if (validLinks.length === 0) {
+        return { valid: false, message: 'Tidak ada link valid ditemukan', count: 0 };
+    }
+    
+    return { 
+        valid: true, 
+        message: `${validLinks.length} link terdeteksi ✓`,
+        count: validLinks.length 
+    };
+}
+
+/**
+ * Show validation message
+ */
+function showValidationMessage(inputId, validation) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    let msgEl = input.parentElement.querySelector('.validation-message');
+    if (!msgEl) {
+        msgEl = document.createElement('p');
+        msgEl.className = 'validation-message text-[10px] font-bold mt-1.5 transition-all';
+        input.parentElement.appendChild(msgEl);
+    }
+    
+    msgEl.textContent = validation.message;
+    
+    if (validation.valid) {
+        msgEl.classList.remove('text-red-400');
+        msgEl.classList.add('text-emerald-400');
+        input.classList.remove('border-red-500');
+        input.classList.add('border-emerald-500');
+    } else {
+        msgEl.classList.remove('text-emerald-400');
+        msgEl.classList.add('text-red-400');
+        input.classList.remove('border-emerald-500');
+        input.classList.add('border-red-500');
+    }
+}
+
+/**
+ * Clear validation message
+ */
+function clearValidationMessage(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    const msgEl = input.parentElement.querySelector('.validation-message');
+    if (msgEl) {
+        msgEl.remove();
+    }
+    input.classList.remove('border-red-500', 'border-emerald-500');
+}
+
+/**
+ * Setup form validation listeners
+ */
+function setupFormValidation() {
+    const nameInput = document.getElementById('siteNameInput');
+    const linksInput = document.getElementById('siteLinksInput');
+    
+    if (nameInput) {
+        // Auto-focus on first input when form is visible
+        nameInput.addEventListener('focus', () => {
+            clearValidationMessage('siteNameInput');
+        });
+        
+        // Validate on blur
+        nameInput.addEventListener('blur', () => {
+            const value = nameInput.value;
+            if (value.trim()) {
+                const validation = validateSiteName(value);
+                showValidationMessage('siteNameInput', validation);
+                validationState.siteName = validation;
+            }
+        });
+        
+        // Character counter
+        nameInput.addEventListener('input', () => {
+            updateCharCounter('siteNameInput', nameInput.value.length, 100);
+        });
+    }
+    
+    if (linksInput) {
+        // Real-time link counter
+        linksInput.addEventListener('input', () => {
+            updateLinkCounter(linksInput.value);
+        });
+        
+        // Validate on blur
+        linksInput.addEventListener('blur', () => {
+            const value = linksInput.value;
+            if (value.trim()) {
+                const validation = validateLinks(value);
+                showValidationMessage('siteLinksInput', validation);
+                validationState.siteLinks = validation;
+            }
+        });
+        
+        // Clear validation on focus
+        linksInput.addEventListener('focus', () => {
+            clearValidationMessage('siteLinksInput');
+        });
+    }
+    
+    // Setup character counters for settings inputs
+    setupCharCounterForInput('setAppTitle', 120);
+    setupCharCounterForInput('setAppTagline', 200);
+    setupCharCounterForInput('setAboutTitle', 200);
+    setupCharCounterForInput('setMaintenanceMsg', 500);
+}
+
+/**
+ * Setup character counter for an input
+ */
+function setupCharCounterForInput(inputId, maxLength) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    input.addEventListener('input', () => {
+        updateCharCounter(inputId, input.value.length, maxLength);
+    });
+}
+
+/**
+ * Update character counter display
+ */
+function updateCharCounter(inputId, currentLength, maxLength) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    let counterEl = input.parentElement.querySelector('.char-counter');
+    if (!counterEl) {
+        counterEl = document.createElement('div');
+        counterEl.className = 'char-counter';
+        input.parentElement.appendChild(counterEl);
+    }
+    
+    const remaining = maxLength - currentLength;
+    const percentage = (currentLength / maxLength) * 100;
+    
+    if (percentage >= 90) {
+        counterEl.style.color = 'rgb(239 68 68)'; // red
+    } else if (percentage >= 75) {
+        counterEl.style.color = 'rgb(251 191 36)'; // yellow
+    } else {
+        counterEl.style.color = 'rgb(100 116 139)'; // slate
+    }
+    
+    counterEl.textContent = `${currentLength}/${maxLength} karakter`;
+}
+
+/**
+ * Update real-time link counter
+ */
+function updateLinkCounter(value) {
+    const linksInput = document.getElementById('siteLinksInput');
+    if (!linksInput) return;
+    
+    let counterEl = linksInput.parentElement.querySelector('.link-counter');
+    if (!counterEl) {
+        counterEl = document.createElement('div');
+        counterEl.className = 'link-counter text-[10px] font-bold mt-1.5 text-indigo-400 flex items-center gap-1.5';
+        linksInput.parentElement.appendChild(counterEl);
+    }
+    
+    const trimmed = value.trim();
+    if (!trimmed) {
+        counterEl.innerHTML = '<span class="opacity-50">🔗 0 link</span>';
+        return;
+    }
+    
+    const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    const count = lines.length;
+    
+    counterEl.innerHTML = `<span>🔗 ${count} link terdeteksi</span>`;
+}
+
+async function loadStats() {
+    showStatsLoading();
     try {
         const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: getHeaders() });
         if (res.status === 403) throw new Error('403');
         const d = await res.json();
-        if (elK) elK.textContent = d.siteCount ?? '0';
-        if (elL) elL.textContent = d.linkCount ?? '0';
-        if (elH) elH.textContent = d.historyCount ?? '0';
+        
+        const elK = document.getElementById('statSites');
+        const elL = document.getElementById('statLinks');
+        const elH = document.getElementById('statHistory');
+        
+        if (elK) {
+            animateStatChange(elK, d.siteCount ?? '0');
+        }
+        if (elL) {
+            animateStatChange(elL, d.linkCount ?? '0');
+        }
+        if (elH) {
+            animateStatChange(elH, d.historyCount ?? '0');
+        }
+        
+        // Update timestamp
+        const timestampEl = document.getElementById('statsTimestamp');
+        if (timestampEl) {
+            const now = new Date();
+            timestampEl.textContent = now.toLocaleTimeString('id-ID', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Load recent activity
+        loadRecentActivity();
     } catch (e) {
         if (String(e.message) === '403') {
             sessionStorage.removeItem('__admin_pass');
             window.location.reload();
         }
+        const elK = document.getElementById('statSites');
+        const elL = document.getElementById('statLinks');
+        const elH = document.getElementById('statHistory');
         if (elK) elK.textContent = '-';
+        if (elL) elL.textContent = '-';
+        if (elH) elH.textContent = '-';
+        toastAdmin('Gagal memuat statistik', 'error');
+    }
+}
+
+/**
+ * Animate stat value change with smooth transition
+ */
+function animateStatChange(element, newValue) {
+    const oldValue = element.textContent;
+    if (oldValue === newValue) {
+        element.textContent = newValue;
+        return;
+    }
+    
+    // Add transition class
+    element.style.transition = 'all 0.3s ease-in-out';
+    element.style.transform = 'scale(1.1)';
+    element.style.color = 'rgb(99, 102, 241)'; // indigo
+    
+    setTimeout(() => {
+        element.textContent = newValue;
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+            element.style.color = '';
+        }, 150);
+    }, 150);
+}
+
+/**
+ * Load recent activity for dashboard
+ */
+async function loadRecentActivity() {
+    const container = document.getElementById('recentActivity');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center py-4 text-slate-600 text-xs">Memuat...</div>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/history`);
+        const data = await res.json();
+        const rows = data.history || [];
+        
+        if (rows.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-3xl mb-2 opacity-20">📋</div>
+                    <p class="text-xs text-slate-600">Belum ada aktivitas</p>
+                </div>`;
+            return;
+        }
+        
+        // Show only 5 most recent
+        const recentRows = rows.slice(0, 5);
+        container.innerHTML = '';
+        
+        recentRows.forEach((item) => {
+            const relativeTime = formatRelativeTime(item.created_at);
+            
+            let badgeClass = 'badge ';
+            if (item.action === 'ADD') badgeClass += 'badge-add';
+            else if (item.action === 'EDIT') badgeClass += 'badge-edit';
+            else if (item.action === 'DELETE') badgeClass += 'badge-delete';
+            else badgeClass += 'badge-add';
+            
+            const activityItem = document.createElement('div');
+            activityItem.className = 'flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors';
+            activityItem.innerHTML = `
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <span class="${badgeClass}">${item.action}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-white truncate">${escapeHtml(item.site_name)}</p>
+                        <p class="text-[10px] text-slate-500">${escapeHtml(item.diff_summary || 'No details')}</p>
+                    </div>
+                </div>
+                <span class="text-[9px] text-slate-600 whitespace-nowrap ml-2">${relativeTime}</span>
+            `;
+            container.appendChild(activityItem);
+        });
+        
+        // Add "View All" link
+        const viewAllLink = document.createElement('button');
+        viewAllLink.className = 'w-full text-center text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 py-3 transition-colors';
+        viewAllLink.textContent = 'Lihat semua →';
+        viewAllLink.onclick = () => showTab('history');
+        container.appendChild(viewAllLink);
+        
+    } catch (e) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <p class="text-xs text-red-400">Gagal memuat aktivitas</p>
+            </div>`;
     }
 }
 
@@ -181,6 +626,11 @@ async function loadAboutForm() {
 }
 
 async function saveAboutPage() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Menyimpan...';
+    
     const body = {
         about_page_title: document.getElementById('setAboutTitle').value.trim(),
         about_page_body: document.getElementById('setAboutBody').value
@@ -193,13 +643,21 @@ async function saveAboutPage() {
         });
         const d = await res.json();
         if (d.error) throw new Error(d.error);
-        toastAdmin('Halaman Tentang tersimpan. Cek /about.html');
+        toastAdmin('✓ Halaman Tentang tersimpan. Cek /about.html', 'success');
     } catch (e) {
-        toastAdmin('Gagal: ' + e.message);
+        toastAdmin('Gagal: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function saveSettings() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Menyimpan...';
+    
     const body = {
         app_title: document.getElementById('setAppTitle').value.trim(),
         app_tagline: document.getElementById('setAppTagline').value.trim(),
@@ -217,45 +675,200 @@ async function saveSettings() {
         });
         const d = await res.json();
         if (d.error) throw new Error(d.error);
-        toastAdmin('Pengaturan tersimpan. Refresh halaman worker buat lihat judul baru.');
+        toastAdmin('✓ Pengaturan tersimpan. Refresh halaman worker buat lihat judul baru.', 'success');
     } catch (e) {
-        toastAdmin('Gagal simpan: ' + e.message);
+        toastAdmin('Gagal simpan: ' + e.message, 'error');
         if (String(e.message).includes('Password') || String(e.message).includes('403')) {
             sessionStorage.removeItem('__admin_pass');
             window.location.reload();
         }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function loadServerHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500 text-xs">Memuat…</td></tr>';
+    
+    // Show loading state
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="px-4 py-8 text-center">
+                <div class="table-loading">
+                    <div class="table-loading-spinner mx-auto mb-3"></div>
+                    <p class="text-xs text-slate-500 font-bold">Memuat riwayat...</p>
+                </div>
+            </td>
+        </tr>`;
+    
     try {
         const res = await fetch(`${API_BASE}/api/history`);
         const data = await res.json();
         const rows = data.history || [];
+        
+        // Update pagination state
+        historyPagination.totalItems = rows.length;
+        historyPagination.totalPages = Math.ceil(rows.length / historyPagination.itemsPerPage);
+        
         if (rows.length === 0) {
-            tbody.innerHTML =
-                '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-500 text-xs italic">Riwayat kosong.</td></tr>';
+            // Enhanced empty state
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-12 text-center">
+                        <div class="empty-state-icon">📋</div>
+                        <p class="text-sm font-bold text-slate-400 mb-1">Belum ada riwayat</p>
+                        <p class="text-xs text-slate-600">Aktivitas admin akan muncul di sini</p>
+                    </td>
+                </tr>`;
+            updatePaginationControls();
             return;
         }
+        
+        // Calculate pagination
+        const startIdx = (historyPagination.currentPage - 1) * historyPagination.itemsPerPage;
+        const endIdx = startIdx + historyPagination.itemsPerPage;
+        const paginatedRows = rows.slice(startIdx, endIdx);
+        
         tbody.innerHTML = '';
-        rows.slice(0, 40).forEach((item) => {
+        paginatedRows.forEach((item) => {
             const tr = document.createElement('tr');
-            tr.className = 'border-b border-slate-800/80 hover:bg-slate-900/50';
-            const when = formatWIBTimestamp(item.created_at);
+            tr.className = 'border-b border-slate-800/80 hover:bg-slate-900/50 transition-colors';
+            const relativeTime = formatRelativeTime(item.created_at);
+            const exactTime = formatWIBTimestamp(item.created_at);
+            
+            // Badge color based on action type
+            let badgeClass = 'badge ';
+            if (item.action === 'ADD') badgeClass += 'badge-add';
+            else if (item.action === 'EDIT') badgeClass += 'badge-edit';
+            else if (item.action === 'DELETE') badgeClass += 'badge-delete';
+            else badgeClass += 'badge-add';
+            
             tr.innerHTML = `
-                <td class="px-4 py-3 text-[10px] font-black uppercase text-indigo-400">${item.action}</td>
+                <td class="px-4 py-3"><span class="${badgeClass}">${item.action}</span></td>
                 <td class="px-4 py-3 text-xs font-bold text-white truncate max-w-[8rem]">${escapeHtml(item.site_name)}</td>
                 <td class="px-4 py-3 text-[10px] text-slate-400">${escapeHtml(item.diff_summary || '')}</td>
-                <td class="px-4 py-3 text-[9px] text-slate-600 whitespace-nowrap">${when}</td>`;
+                <td class="px-4 py-3">
+                    <span class="relative-time" title="${exactTime}">${relativeTime}</span>
+                </td>`;
             tbody.appendChild(tr);
         });
+        
+        updatePaginationControls();
     } catch (e) {
-        tbody.innerHTML =
-            '<tr><td colspan="4" class="px-4 py-6 text-center text-red-400 text-xs">Gagal memuat.</td></tr>';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center">
+                    <div class="text-3xl mb-3 opacity-30">⚠️</div>
+                    <p class="text-sm font-bold text-red-400 mb-2">Gagal memuat riwayat</p>
+                    <p class="text-xs text-slate-500 mb-4">${escapeHtml(e.message)}</p>
+                    <button onclick="loadServerHistoryTable()" class="text-[10px] font-black uppercase tracking-widest bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-4 py-2 rounded-xl transition-colors">
+                        Coba lagi
+                    </button>
+                </td>
+            </tr>`;
     }
+}
+
+/**
+ * Update pagination controls for history table
+ */
+function updatePaginationControls() {
+    let paginationEl = document.getElementById('historyPagination');
+    
+    if (!paginationEl) {
+        // Create pagination container if it doesn't exist
+        const historySection = document.querySelector('[data-tab-panel="history"]');
+        if (!historySection) return;
+        
+        paginationEl = document.createElement('div');
+        paginationEl.id = 'historyPagination';
+        paginationEl.className = 'mt-4';
+        historySection.appendChild(paginationEl);
+    }
+    
+    if (historyPagination.totalPages <= 1) {
+        paginationEl.innerHTML = '';
+        return;
+    }
+    
+    const { currentPage, totalPages, totalItems, itemsPerPage } = historyPagination;
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+    
+    paginationEl.innerHTML = `
+        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <div class="text-xs text-slate-500 font-bold">
+                Menampilkan ${startItem}-${endItem} dari ${totalItems} entri
+            </div>
+            <div class="flex items-center gap-2">
+                <button 
+                    onclick="goToHistoryPage(${currentPage - 1})" 
+                    ${currentPage === 1 ? 'disabled' : ''}
+                    class="px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors ${
+                        currentPage === 1 
+                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    }">
+                    ← Prev
+                </button>
+                <div class="flex items-center gap-1">
+                    ${generatePageNumbers(currentPage, totalPages)}
+                </div>
+                <button 
+                    onclick="goToHistoryPage(${currentPage + 1})" 
+                    ${currentPage === totalPages ? 'disabled' : ''}
+                    class="px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors ${
+                        currentPage === totalPages 
+                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    }">
+                    Next →
+                </button>
+            </div>
+        </div>`;
+}
+
+/**
+ * Generate page number buttons
+ */
+function generatePageNumbers(currentPage, totalPages) {
+    const pages = [];
+    const maxVisible = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const isActive = i === currentPage;
+        pages.push(`
+            <button 
+                onclick="goToHistoryPage(${i})" 
+                class="w-8 h-8 text-[10px] font-black rounded-lg transition-colors ${
+                    isActive 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                }">
+                ${i}
+            </button>
+        `);
+    }
+    
+    return pages.join('');
+}
+
+/**
+ * Navigate to specific history page
+ */
+function goToHistoryPage(page) {
+    if (page < 1 || page > historyPagination.totalPages) return;
+    historyPagination.currentPage = page;
+    loadServerHistoryTable();
 }
 
 function escapeHtml(s) {
@@ -265,17 +878,21 @@ function escapeHtml(s) {
 }
 
 async function clearServerHistory() {
-    if (!confirm('Yakin hapus SEMUA riwayat server? Ini nggak bisa di-undo, bestie.')) return;
-    try {
-        const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers: getHeaders() });
-        const d = await res.json();
-        if (d.error) throw new Error(d.error);
-        toastAdmin(`Riwayat dikosongin (${d.deleted || 0} baris).`);
-        loadServerHistoryTable();
-        loadStats();
-    } catch (e) {
-        toastAdmin('Gagal: ' + e.message);
-    }
+    showConfirmDialog(
+        'Yakin hapus SEMUA riwayat server? Ini nggak bisa di-undo, bestie.',
+        async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers: getHeaders() });
+                const d = await res.json();
+                if (d.error) throw new Error(d.error);
+                toastAdmin(`✓ Riwayat dikosongin (${d.deleted || 0} baris).`, 'success');
+                loadServerHistoryTable();
+                loadStats();
+            } catch (e) {
+                toastAdmin('Gagal: ' + e.message, 'error');
+            }
+        }
+    );
 }
 
 function cancelEdit() {
@@ -290,6 +907,22 @@ function cancelEdit() {
 }
 
 async function loadSites() {
+    const container = document.getElementById('listDisplay');
+    if (container) {
+        // Show loading skeleton
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 animate-pulse">
+                    <div class="h-4 bg-slate-700 rounded w-1/3 mb-2"></div>
+                    <div class="h-6 bg-slate-700 rounded w-2/3"></div>
+                </div>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 animate-pulse">
+                    <div class="h-4 bg-slate-700 rounded w-1/3 mb-2"></div>
+                    <div class="h-6 bg-slate-700 rounded w-2/3"></div>
+                </div>
+            </div>`;
+    }
+    
     try {
         const res = await fetch(`${API_BASE}/api/sites`);
         const data = await res.json();
@@ -305,7 +938,18 @@ async function loadSites() {
         });
         render();
     } catch (err) {
-        toastAdmin('Gagal muat data situs.');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center p-8 border-2 border-dashed border-red-500/30 rounded-3xl bg-red-500/5">
+                    <div class="text-4xl mb-3 opacity-30">⚠️</div>
+                    <p class="text-sm font-bold text-red-400 mb-2">Gagal memuat data situs</p>
+                    <p class="text-xs text-slate-500 mb-4">${escapeHtml(err.message)}</p>
+                    <button onclick="loadSites()" class="text-[10px] font-black uppercase tracking-widest bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-4 py-2 rounded-xl transition-colors">
+                        Coba lagi
+                    </button>
+                </div>`;
+        }
+        toastAdmin('Gagal muat data situs: ' + err.message, 'error');
     }
 }
 
@@ -313,8 +957,16 @@ function render() {
     const container = document.getElementById('listDisplay');
     container.innerHTML = '';
     if (sitesData.length === 0) {
-        container.innerHTML =
-            '<p class="text-sm text-slate-500 italic p-8 text-center border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/40">Belum ada kategori. Isi form di atas.</p>';
+        // Enhanced empty state
+        container.innerHTML = `
+            <div class="text-center p-12 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/40">
+                <div class="text-6xl mb-4 opacity-20">📋</div>
+                <p class="text-sm font-bold text-slate-400 mb-2">Belum ada kategori</p>
+                <p class="text-xs text-slate-600 mb-6">Mulai dengan mengisi form di atas atau upload file TXT</p>
+                <button onclick="document.getElementById('siteNameInput').focus()" class="text-[10px] font-black uppercase tracking-widest bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-4 py-2 rounded-xl">
+                    Buat kategori pertama
+                </button>
+            </div>`;
         return;
     }
 
@@ -411,7 +1063,21 @@ async function saveSiteManual() {
     const rawLinks = document.getElementById('siteLinksInput').value.trim();
     const btn = document.getElementById('saveBtn');
 
-    if (!name || !rawLinks) return toastAdmin('Nama & link wajib diisi, ya.');
+    // Validate before submit
+    const nameValidation = validateSiteName(name);
+    const linksValidation = validateLinks(rawLinks);
+    
+    if (!nameValidation.valid) {
+        showValidationMessage('siteNameInput', nameValidation);
+        document.getElementById('siteNameInput').focus();
+        return toastAdmin('Nama kategori tidak valid', 'error');
+    }
+    
+    if (!linksValidation.valid) {
+        showValidationMessage('siteLinksInput', linksValidation);
+        document.getElementById('siteLinksInput').focus();
+        return toastAdmin('Link tidak valid', 'error');
+    }
 
     const linksArr = rawLinks
         .split(/\r?\n/)
@@ -423,10 +1089,11 @@ async function saveSiteManual() {
         })
         .filter((l) => l !== null);
 
-    if (linksArr.length === 0) return toastAdmin('Minimal satu link valid.');
+    if (linksArr.length === 0) return toastAdmin('Minimal satu link valid.', 'error');
 
     btn.disabled = true;
-    btn.innerText = 'Menyimpan…';
+    const originalText = btn.textContent;
+    btn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Menyimpan...';
 
     try {
         if (editingSiteId) {
@@ -437,6 +1104,7 @@ async function saveSiteManual() {
             });
             const d = await res.json();
             if (d.error) throw new Error(d.error);
+            toastAdmin('✓ Kategori berhasil diupdate', 'success');
             cancelEdit();
         } else {
             const res = await fetch(`${API_BASE}/api/sites`, {
@@ -446,27 +1114,23 @@ async function saveSiteManual() {
             });
             const d = await res.json();
             if (d.error) throw new Error(d.error);
+            toastAdmin('✓ Kategori baru berhasil ditambahkan', 'success');
             document.getElementById('siteNameInput').value = '';
             document.getElementById('siteLinksInput').value = '';
+            clearValidationMessage('siteNameInput');
+            clearValidationMessage('siteLinksInput');
         }
-        toastAdmin('Tersimpan.');
         loadSites();
         loadStats();
     } catch (err) {
-        toastAdmin('Error: ' + err.message);
+        toastAdmin('Error: ' + err.message, 'error');
         if (String(err.message).includes('Password') || String(err.message).includes('Ditolak')) {
             sessionStorage.removeItem('__admin_pass');
             window.location.reload();
         }
     } finally {
         btn.disabled = false;
-        if (editingSiteId) {
-            btn.innerText = 'Update skema';
-        } else {
-            btn.innerText = 'Simpan ke server';
-            btn.className =
-                'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-95 shadow-indigo-900/40';
-        }
+        btn.textContent = originalText;
     }
 }
 
@@ -529,16 +1193,22 @@ function editSite(siteId) {
 }
 
 async function deleteSite(siteId) {
-    if (editingSiteId) return toastAdmin('Batalkan mode edit dulu.');
-    if (!confirm('Hapus kategori ini permanen? Progress device ikut kehapus.')) return;
-    try {
-        const res = await fetch(`${API_BASE}/api/sites/${siteId}`, { method: 'DELETE', headers: getHeaders() });
-        const d = await res.json();
-        if (d.error) throw new Error(d.error);
-        toastAdmin('Terhapus.');
-        loadSites();
-        loadStats();
-    } catch (err) {
-        toastAdmin(err.message);
-    }
+    if (editingSiteId) return toastAdmin('Batalkan mode edit dulu.', 'error');
+    
+    const data = categories[siteId];
+    showConfirmDialog(
+        `Hapus kategori "${data.name}" permanen? Progress device ikut kehapus.`,
+        async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/sites/${siteId}`, { method: 'DELETE', headers: getHeaders() });
+                const d = await res.json();
+                if (d.error) throw new Error(d.error);
+                toastAdmin('✓ Kategori berhasil dihapus', 'success');
+                loadSites();
+                loadStats();
+            } catch (err) {
+                toastAdmin('Gagal menghapus: ' + err.message, 'error');
+            }
+        }
+    );
 }

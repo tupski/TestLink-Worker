@@ -93,7 +93,7 @@ export async function createDatabaseAdapter(config: DatabaseConfig): Promise<Dat
 
     if (config.type === 'mysql') {
         // Dynamically import MySQL adapter
-        const { MySQLAdapter } = await import('./mysql-adapter.js');
+        const { MySQLAdapter } = await require('./mysql-adapter');
         adapter = new MySQLAdapter(config);
     } else if (config.type === 'sqlite') {
         // Dynamically import SQLite adapter
