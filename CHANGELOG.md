@@ -2,6 +2,41 @@
 
 Semua perubahan penting pada proyek **Test Link** akan didokumentasikan di file ini. Format ini didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0] - 2026-05-25
+### Added
+- **MySQL Database Support**: Dukungan penuh untuk MySQL database sebagai alternatif SQLite.
+- **Database Abstraction Layer**: Interface `DatabaseAdapter` untuk mendukung multiple database backends.
+- **Connection Pooling**: Implementasi connection pool untuk MySQL dengan konfigurasi limit (default: 10 koneksi).
+- **Migration Script**: Script `npm run migrate` untuk migrasi data dari SQLite ke MySQL.
+- **TypeScript Rewrite**: Konversi seluruh backend dari JavaScript ke TypeScript.
+- **Enhanced Logging**: Sistem logging terstruktur dengan level (debug, info, warn, error).
+- **Slow Query Detection**: Peringatan otomatis untuk query yang memakan waktu >1 detik.
+- **Connection Retry**: Mekanisme retry otomatis dengan exponential backoff untuk koneksi database.
+- **Health Check Endpoint**: `GET /api/health` untuk monitoring status aplikasi dan database.
+- **Graceful Shutdown**: Penanganan SIGTERM/SIGINT untuk menutup koneksi database dengan benar.
+- **User-Friendly Errors**: Pesan error dalam Bahasa Indonesia untuk masalah database umum.
+- **Deployment Documentation**: Panduan lengkap deployment ke aaPanel dengan Node Proxy.
+
+### Changed
+- **Server Architecture**: Refactor ke class-based `TestLinkServer` untuk modularitas lebih baik.
+- **Environment Configuration**: Konfigurasi database via environment variables (DB_TYPE, DB_HOST, dll).
+- **Error Handling**: Peningkatan error handling dengan `DatabaseError` class.
+
+### Breaking Changes
+- **Environment Variables**: Perlu set `DB_TYPE=mysql` dan kredensial MySQL untuk production.
+- **Build Step Required**: Perlu menjalankan `npm run build` sebelum `npm start`.
+- **Entry Point Changed**: Entry point production berubah dari `api/index.js` ke `dist/index.js`.
+
+### Migration Guide
+1. Backup database SQLite existing
+2. Setup MySQL database di aaPanel
+3. Copy `.env.example` ke `.env` dan sesuaikan konfigurasi
+4. Jalankan `npm run build`
+5. Jalankan `npm run migrate` untuk migrasi data
+6. Update Node Proxy startup file ke `dist/index.js`
+
+---
+
 ## [0.9.220426] - 2026-04-20
 ### Added
 - **WIB Timezone Support**: Implementasi zona waktu WIB (UTC+7) untuk semua timestamp di server dan client.

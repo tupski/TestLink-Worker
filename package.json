@@ -4,9 +4,14 @@
   "description": "",
   "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.js",
+    "build": "tsc",
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "start:legacy": "node api/index.js",
     "deploy:cf": "cd cloudflare && npx wrangler deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate": "ts-node src/scripts/migrate.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,7 +21,18 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
+    "mysql2": "^3.22.3",
     "sqlite3": "5.1.7",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "fast-check": "^4.8.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
   }
 }
