@@ -48,3 +48,7 @@ temp/
 README_TYPESCRIPT.md
 README_DEPLOYMENT.md
 **/*.test.ts
+.flyenv
+QUICK_START.md
+README_LOCAL_SETUP.md
+CARA_JALANKAN.mdBukaTunnel.bat

@@ -31,19 +31,56 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 
 ---
 
+## 🚀 Quick Start
+
+### Cara Tercepat (< 5 menit)
+
+**Windows:**
+1. Double-click `setup.bat` untuk install & build
+2. Double-click `start.bat` untuk jalankan server
+3. Buka browser: http://localhost:3030/
+
+**Manual:**
+```bash
+npm install
+npm run build
+npm start
+```
+
+### 📚 Panduan Lengkap
+
+- **[QUICK_START.md](QUICK_START.md)** - Panduan cepat (English)
+- **[CARA_JALANKAN.md](CARA_JALANKAN.md)** - Panduan lengkap (Bahasa Indonesia)
+- **[README_LOCAL_SETUP.md](README_LOCAL_SETUP.md)** - Setup detail dengan troubleshooting
+- **[README_DEPLOYMENT.md](README_DEPLOYMENT.md)** - Deploy ke aaPanel production
+
+### 🌐 Akses Aplikasi
+
+Setelah server running:
+- **Worker Page**: http://localhost:3030/
+- **Admin Panel**: http://localhost:3030/admin.html (Password: `admin123`)
+- **About Page**: http://localhost:3030/about.html
+- **Health Check**: http://localhost:3030/api/health
+
+---
+
 ## Memulai (Localhost)
 
 1. **Instalasi**:
    ```bash
    npm install
    ```
-2. **Menjalankan Server**:
+2. **Build TypeScript**:
+   ```bash
+   npm run build
+   ```
+3. **Menjalankan Server**:
    ```bash
    npm start
    ```
-3. **Akses**:
-   - Dashboard: `http://localhost:3000`
-   - Admin Panel: `http://localhost:3000/admin.html` (Password: `rahasia123`)
+4. **Akses**:
+   - Dashboard: `http://localhost:3030`
+   - Admin Panel: `http://localhost:3030/admin.html` (Password: `admin123`)
 
 ---
 
