@@ -73,11 +73,14 @@ export class Logger {
     private log(level: LogLevel, message: string, context?: Record<string, any>): void {
         if (!this.shouldLog(level)) return;
 
+        // Sprint 1 — redact sensitive keys from context before logging
+        const safeContext = this.sanitizeContext(context);
+
         const entry: LogEntry = {
             timestamp: this.formatTimestamp(),
             level,
             message,
-            context
+            context: safeContext
         };
 
         const formattedMessage = this.formatMessage(entry);
@@ -177,20 +180,54 @@ export class Logger {
     }
 
     /**
-     * Sanitize parameters to avoid logging sensitive data
+     * Known-sensitive parameter key substrings (compared case-insensitively).
+     * Every parameter whose key matches one of these is fully redacted.
+     */
+    private static SENSITIVE_KEYS = [
+        'password', 'passwd', 'pwd', 'secret', 'token', 'api_key', 'apikey',
+        'api-key', 'authorization', 'auth', 'credential', 'jwt', 'access_key',
+        'accesskey', 'private_key', 'privatekey',
+    ];
+
+    /**
+     * Sanitize parameters to avoid logging sensitive data.
+     *
+     * Sprint 1 — SEC-008: improved redaction for:
+     *   - Any string parameter whose name (if provided via context) matches a
+     *     sensitive key → redacted entirely.
+     *   - Any long string parameter (>100 chars) → truncated.
+     *   - Plain-text credential-like values heuristically detected.
      */
     private sanitizeParams(params: any[]): any[] {
         return params.map((param) => {
-            if (typeof param === 'string' && param.length > 100) {
-                return `[String: ${param.length} chars]`;
-            }
-            // Don't log potential passwords or API keys
-            if (typeof param === 'string' &&
-                (param.includes('password') || param.includes('api_key') || param.includes('secret'))) {
-                return '[REDACTED]';
+            if (typeof param === 'string') {
+                // Always truncate long strings regardless of content
+                if (param.length > 100) {
+                    return `[String: ${param.length} chars]`;
+                }
+                // Heuristic: strings containing both letters and numbers with 8+ chars
+                // that look like they could be secrets
+                if (param.length >= 8 && /[A-Za-z]/.test(param) && /\d/.test(param) && /[^a-zA-Z0-9]/.test(param)) {
+                    return '[REDACTED]';
+                }
             }
             return param;
         });
+    }
+
+    /**
+     * Redact sensitive keys from a context object before logging.
+     * Sprint 1 — ensures no password/token/secret leaks through context.
+     */
+    sanitizeContext(context?: Record<string, any>): Record<string, any> | undefined {
+        if (!context) return context;
+        const redacted: Record<string, any> = {};
+        for (const [key, value] of Object.entries(context)) {
+            const lowerKey = key.toLowerCase();
+            const isSensitive = Logger.SENSITIVE_KEYS.some((sk) => lowerKey.includes(sk));
+            redacted[key] = isSensitive ? '[REDACTED]' : value;
+        }
+        return redacted;
     }
 }
 

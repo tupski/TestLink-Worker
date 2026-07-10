@@ -1,10 +1,22 @@
 /**
  * TestLink Worker - TypeScript API Server
- * 
+ *
  * Migrated from api/index.js to TypeScript with database abstraction layer.
  * Supports both SQLite (local development) and MySQL (production) databases.
- * 
+ *
  * **Validates: Requirements 1.1, 9.1, 10.6, 11.6**
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * SECURITY NOTICE (Sprint 1)
+ * ══════════════════════════════════════════════════════════════════════════
+ * - All sensitive configuration comes from validated environment variables.
+ * - Hardcoded credentials are forbidden — the process fails at startup if
+ *   any required variable is missing.
+ * - CORS is restricted to ALLOW_ORIGINS from env.
+ * - Rate limiting protects every API endpoint (60 req/min/IP by default).
+ * - SSRF prevention blocks requests to internal / private IP ranges.
+ * - Error responses never expose stack traces or database internals.
+ * ══════════════════════════════════════════════════════════════════════════
  */
 
 import express, { Express, Request, Response, NextFunction } from 'express';
@@ -12,17 +24,24 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 import { createDatabaseAdapterFromEnv } from './database/factory';
+import { validateEnv } from './utils/env';
+import { logger } from './utils/logger';
 import { DatabaseAdapter, Site, Progress, History, KVSetting, AdminStats, HistoryMeta, SiteWithProgress } from './types/database';
 
 // Load environment variables
 dotenv.config();
 
+// Validate environment — fails fast if required vars are missing
+const env = validateEnv();
+
 // ============================================================================
 // Constants and Configuration
 // ============================================================================
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rahasia123';
+// ADMIN_PASSWORD is validated by Zod — if missing, startup fails
+const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 
 const SETTINGS_KEYS = new Set([
     'app_title',
@@ -70,6 +89,53 @@ function resolveProjectRoot(): string {
     if (fs.existsSync(path.join(dir, 'index.html'))) return dir;
     return path.resolve(path.join(__dirname, '..'));
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// SSRF Protection  (Sprint 1 — SEC-005)
+// ────────────────────────────────────────────────────────────────────────────
+// Block requests to internal / private IP ranges so the server cannot be used
+// as an SSRF vector to probe cloud metadata, internal services, etc.
+
+const PRIVATE_IP_PATTERNS = [
+    /^127\./,           // loopback
+    /^10\./,            // RFC 1918 10.0.0.0/8
+    /^172\.(1[6-9]|2\d|3[01])\./, // RFC 1918 172.16.0.0/12
+    /^192\.168\./,      // RFC 1918 192.168.0.0/16
+    /^169\.254\./,      // link-local (cloud metadata)
+    /^0\./,             // catch 0.x.x.x
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT
+    /^::1$/,            // IPv6 loopback
+];
+
+/** Returns `true` when `hostname` is considered safe to fetch (no SSRF). */
+function isSafeUrlHostname(hostname: string): boolean {
+    const lower = hostname.toLowerCase();
+    // Reject bare localhost / IPv4 loopback names
+    if (lower === 'localhost' || lower === '127.0.0.1' || lower === '0.0.0.0') return false;
+    // Reject private IP patterns
+    for (const pat of PRIVATE_IP_PATTERNS) {
+        if (pat.test(lower)) return false;
+    }
+    return true;
+}
+
+/** Validates that a URL is safe to fetch (no SSRF). Returns error message or null. */
+function validateUrlSafety(urlStr: string): string | null {
+    try {
+        const u = new URL(urlStr);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+            return `Protocol not allowed: ${u.protocol}`;
+        }
+        if (!isSafeUrlHostname(u.hostname)) {
+            return `Hostname not allowed: ${u.hostname}`;
+        }
+        return null;
+    } catch {
+        return 'Invalid URL';
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 const ROOT = resolveProjectRoot();
 
@@ -183,6 +249,25 @@ async function resolveUrlWithRedirects(startUrl: string, maxMs: number): Promise
 }
 
 
+// ────────────────────────────────────────────────────────────────────────────
+// Rate Limiting defaults  (Sprint 1 — SEC-006)
+// ────────────────────────────────────────────────────────────────────────────
+// Every API endpoint is rate-limited per IP.
+// Configure via RATE_LIMIT_WINDOW_MS and RATE_LIMIT_MAX in env.
+
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '60', 10);
+
+const generalLimiter = rateLimit({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' },
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+
 // ============================================================================
 // Server Class
 // ============================================================================
@@ -199,8 +284,38 @@ export class TestLinkServer {
 
     private setupMiddleware(): void {
         this.app.set('trust proxy', 1);
-        this.app.use(cors());
+
+        // CORS — restrict to ALLOW_ORIGINS from env; fall back to same-origin
+        const allowedOrigins = (process.env.ALLOW_ORIGINS || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+
+        if (allowedOrigins.length > 0) {
+            this.app.use(cors({
+                origin: (origin, callback) => {
+                    // Allow requests with no origin (server-to-server, curl, etc.)
+                    if (!origin) return callback(null, true);
+                    if (allowedOrigins.includes(origin)) return callback(null, true);
+                    callback(new Error(`Origin ${origin} not allowed by CORS`));
+                },
+                credentials: true,
+            }));
+        } else {
+            // Fallback: allow same-origin + local development hosts
+            this.app.use(cors({
+                origin: [
+                    /^https?:\/\/localhost(:\d+)?$/,
+                    /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+                ],
+                credentials: true,
+            }));
+        }
+
         this.app.use(express.json({ limit: '10mb' }));
+
+        // Apply rate limiter to all /api/* routes
+        this.app.use('/api/', generalLimiter);
     }
 
     /** Admin authentication middleware */
@@ -371,6 +486,14 @@ export class TestLinkServer {
             target = String(target).trim().slice(0, 2048);
             if (!target) return res.status(400).json({ error: 'URL kosong.' });
             if (!/^https?:\/\//i.test(target)) target = 'https://' + target;
+
+            // Sprint 1 — SSRF prevention: reject private / internal targets
+            const safetyMsg = validateUrlSafety(target);
+            if (safetyMsg) {
+                logger.warn('[SSRF] Blocked unsafe URL', { target, reason: safetyMsg });
+                return res.json({ blocked: false, unreachable: true, finalUrl: target, note: 'URL ditolak oleh aturan keamanan.' });
+            }
+
             try {
                 const out = await resolveUrlWithRedirects(target, 12000);
                 const gsbBlocked = await this.checkWithGSB(target);
@@ -387,7 +510,7 @@ export class TestLinkServer {
                     fromGSB: gsbBlocked
                 });
             } catch (e: any) {
-                return res.status(500).json({ error: String(e.message || e) });
+                return res.status(500).json({ error: 'Gagal memeriksa URL.' });
             }
         });
 
@@ -646,6 +769,16 @@ export class TestLinkServer {
                 if (err) res.status(404).send('Not found');
             });
         });
+
+        // Sprint 1 — Global error handler (never exposes stack traces or internals)
+        this.app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+            logger.error('[Server] Unhandled error', {
+                message: err.message,
+                // Only expose stack in development
+                stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+            });
+            res.status(500).json({ error: 'Terjadi kesalahan internal server.' });
+        });
     }
 
 
@@ -721,7 +854,8 @@ export class TestLinkServer {
 // Main Entry Point
 // ============================================================================
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
+// PORT is already validated by env.ts — use the parsed value
+const PORT = env.PORT;
 
 // Only start server if not in test mode and not imported as module
 if (process.env.NODE_ENV !== 'test' && require.main === module) {

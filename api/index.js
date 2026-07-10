@@ -1,3 +1,16 @@
+/**
+ * TestLink Worker — Legacy JavaScript API (Vercel-compatible)
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * SECURITY NOTICE (Sprint 1)
+ * ══════════════════════════════════════════════════════════════════════════
+ * - ADMIN_PASSWORD is required — no fallback.
+ * - CORS is restricted to ALLOW_ORIGINS from environment.
+ * - SSRF prevention blocks fetches to private / internal IP ranges.
+ * - Error responses never expose stack traces or database internals.
+ * ══════════════════════════════════════════════════════════════════════════
+ */
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -7,7 +20,29 @@ const fs = require('fs');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors());
+
+// CORS — restrict to ALLOW_ORIGINS from env; fallback to same-origin
+const allowedOrigins = (process.env.ALLOW_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+if (allowedOrigins.length > 0) {
+    app.use(cors({
+        origin: (origin, callback) => {
+            if (!origin) return callback(null, true);
+            if (allowedOrigins.includes(origin)) return callback(null, true);
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+        },
+        credentials: true,
+    }));
+} else {
+    app.use(cors({
+        origin: [/^https?:\/\/localhost(:\d+)?$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/],
+        credentials: true,
+    }));
+}
+
 app.use(express.json({ limit: '10mb' }));
 
 /** Root proyek: di Vercel, includeFiles membawa file ke /var/task. */
@@ -117,6 +152,24 @@ async function readResponseBodyPrefix(res, maxChars) {
     } catch (e) {
         return '';
     }
+}
+
+// Sprint 1 — SSRF Protection
+const PRIVATE_IP_PATTERNS = [
+    /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^169\.254\./, /^0\./, /^::1$/
+];
+function isSafeUrlHostname(hostname) {
+    const lower = hostname.toLowerCase();
+    if (lower === 'localhost' || lower === '127.0.0.1' || lower === '0.0.0.0') return false;
+    return !PRIVATE_IP_PATTERNS.some(p => p.test(lower));
+}
+function validateUrlSafety(urlStr) {
+    try {
+        const u = new URL(urlStr);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'Protocol not allowed: ' + u.protocol;
+        if (!isSafeUrlHostname(u.hostname)) return 'Hostname not allowed: ' + u.hostname;
+        return null;
+    } catch { return 'Invalid URL'; }
 }
 
 async function resolveUrlWithRedirects(startUrl, maxMs) {
@@ -276,7 +329,12 @@ function uuidv4() {
     });
 }
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rahasia123';
+// Sprint 1 — ADMIN_PASSWORD is required; fail at startup if missing
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.error('❌ ADMIN_PASSWORD environment variable is required.');
+    process.exit(1);
+}
 const requireAdmin = (req, res, next) => {
     const reqPass = req.headers['x-admin-password'] || '';
     if (reqPass !== ADMIN_PASSWORD) {
@@ -412,6 +470,14 @@ app.post('/api/check-block', async (req, res) => {
     target = String(target).trim().slice(0, 2048);
     if (!target) return res.status(400).json({ error: 'URL kosong.' });
     if (!/^https?:\/\//i.test(target)) target = 'https://' + target;
+
+    // Sprint 1 — SSRF prevention: reject private / internal targets
+    const safetyMsg = validateUrlSafety(target);
+    if (safetyMsg) {
+        console.warn('[SSRF] Blocked unsafe URL', target, safetyMsg);
+        return res.json({ blocked: false, unreachable: true, finalUrl: target, note: 'URL ditolak oleh aturan keamanan.' });
+    }
+
     try {
         const out = await resolveUrlWithRedirects(target, 12000);
         let gsbBlocked = false;
@@ -436,7 +502,7 @@ app.post('/api/check-block', async (req, res) => {
             fromGSB: gsbBlocked
         });
     } catch (e) {
-        return res.status(500).json({ error: String(e.message || e) });
+        return res.status(500).json({ error: 'Gagal memeriksa URL.' });
     }
 });
 
@@ -649,6 +715,12 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(ROOT, '404.html'), (err) => {
         if (err) res.status(404).send('Not found');
     });
+});
+
+// Sprint 1 — Global error handler (never exposes internals)
+app.use((err, req, res, next) => {
+    console.error('[Server] Unhandled error:', err.message);
+    res.status(500).json({ error: 'Terjadi kesalahan internal server.' });
 });
 
 const PORT = process.env.PORT || 3000;
