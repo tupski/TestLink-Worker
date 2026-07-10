@@ -139,15 +139,35 @@ async function resolveUrlWithRedirects(startUrl, maxMs) {
         if (ct.includes('text/html') || ct.includes('application/xhtml') || ct.includes('text/plain') || !ct) {
             htmlPrefix = await readResponseBodyPrefix(res, 24000);
         }
+        
         const urlHit = urlLooksBlocked(finalUrl);
         const bodyHit = htmlLooksBlocked(htmlPrefix);
+        
+        // Deteksi tambahan: status 403/451 sering digunakan untuk blokir
+        const statusBlocked = res.status === 403 || res.status === 451;
+        
+        // Deteksi tambahan: redirect ke domain berbeda (kemungkinan halaman blokir)
+        let suspiciousRedirect = false;
+        try {
+            const startDomain = new URL(startUrl).hostname.replace(/^www\./, '');
+            const finalDomain = new URL(finalUrl).hostname.replace(/^www\./, '');
+            // Jika redirect ke domain yang sangat berbeda dan ada indikasi blokir
+            if (startDomain !== finalDomain && !finalDomain.includes(startDomain) && !startDomain.includes(finalDomain)) {
+                // Cek apakah domain tujuan mencurigakan
+                const suspiciousDomains = ['gov.', '.go.id', 'telkom', 'indihome', 'xlaxiata'];
+                suspiciousRedirect = suspiciousDomains.some(d => finalDomain.includes(d));
+            }
+        } catch (e) {}
+        
         return {
             ok: true,
             finalUrl,
             status: res.status,
-            blocked: urlHit || bodyHit,
+            blocked: urlHit || bodyHit || statusBlocked || suspiciousRedirect,
             urlHit,
-            bodyHit
+            bodyHit,
+            statusBlocked,
+            suspiciousRedirect
         };
     } catch (err) {
         return { ok: false, error: String(err.message || err), finalUrl: startUrl };
@@ -411,6 +431,8 @@ app.post('/api/check-block', async (req, res) => {
             status: out.status,
             fromUrl: !!out.urlHit,
             fromBody: !!out.bodyHit,
+            fromStatus: !!out.statusBlocked,
+            fromRedirect: !!out.suspiciousRedirect,
             fromGSB: gsbBlocked
         });
     } catch (e) {
