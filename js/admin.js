@@ -179,7 +179,7 @@ async function loadDashRecent() {
         const d = await res.json();
         const items = (d.history || []).slice(0, 5);
         if (items.length === 0) {
-            box.innerHTML = '<p class="text-sm text-slate-500">Belum ada aktivitas.</p>';
+            box.innerHTML = '<p class="text-sm text-slate-400">Belum ada aktivitas.</p>';
             return;
         }
         box.innerHTML = `<ul class="divide-y divide-slate-800">${items
@@ -188,12 +188,12 @@ async function loadDashRecent() {
                 return `<li class="flex items-center gap-3 py-2">
                     <span class="badge ${cls} shrink-0">${escapeHtmlAdmin(it.action)}</span>
                     <span class="text-sm text-slate-300 truncate flex-1">${escapeHtmlAdmin(it.site_name || '')}</span>
-                    <span class="text-xs text-slate-500 shrink-0">${formatWIBTimestamp(it.created_at)}</span>
+                    <span class="text-xs text-slate-400 shrink-0">${formatWIBTimestamp(it.created_at)}</span>
                 </li>`;
             })
             .join('')}</ul>`;
     } catch (e) {
-        box.innerHTML = '<p class="text-sm text-slate-500">Gagal memuat aktivitas.</p>';
+        box.innerHTML = '<p class="text-sm text-slate-400">Gagal memuat aktivitas.</p>';
     }
 }
 
@@ -287,14 +287,14 @@ async function saveSettings() {
 async function loadServerHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500 text-xs">Memuat…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">Memuat…</td></tr>';
     try {
         const res = await fetch(`${API_BASE}/api/history`);
         const data = await res.json();
         const rows = data.history || [];
         if (rows.length === 0) {
             tbody.innerHTML =
-                '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-500 text-xs italic">Riwayat kosong.</td></tr>';
+                '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 text-xs italic">Riwayat kosong.</td></tr>';
             return;
         }
         tbody.innerHTML = '';
@@ -306,7 +306,7 @@ async function loadServerHistoryTable() {
                 <td class="px-4 py-3 text-[10px] font-black uppercase text-indigo-400">${item.action}</td>
                 <td class="px-4 py-3 text-xs font-bold text-white truncate max-w-[8rem]">${escapeHtml(item.site_name)}</td>
                 <td class="px-4 py-3 text-[10px] text-slate-400">${escapeHtml(item.diff_summary || '')}</td>
-                <td class="px-4 py-3 text-[9px] text-slate-600 whitespace-nowrap">${when}</td>`;
+                <td class="px-4 py-3 text-[9px] text-slate-400 whitespace-nowrap">${when}</td>`;
             tbody.appendChild(tr);
         });
     } catch (e) {
@@ -419,13 +419,13 @@ function render() {
             <td>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="toggleActive('${data.id}', ${!isActive})"
-                        class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" aria-label="${isActive ? 'Nonaktifkan' : 'Aktifkan'}">
+                        class="btn btn--ghost !py-1 !px-2 text-xs" aria-label="${isActive ? 'Nonaktifkan' : 'Aktifkan'}">
                         ${isActive ? 'Nonaktif' : 'Aktifkan'}
                     </button>
                     <button type="button" onclick="editSite('${data.id}')"
-                        class="btn btn--primary !min-h-0 !py-1 !px-2 text-xs">Edit</button>
+                        class="btn btn--primary !py-1 !px-2 text-xs">Edit</button>
                     <button type="button" onclick="deleteSite('${data.id}')"
-                        class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" aria-label="Hapus">Hapus</button>
+                        class="btn btn--ghost !py-1 !px-2 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" aria-label="Hapus">Hapus</button>
                 </div>
             </td>
         `;

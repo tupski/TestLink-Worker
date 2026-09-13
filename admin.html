@@ -40,7 +40,7 @@
                 <button type="button" data-tab-btn="system" class="admin-nav-item">Sistem</button>
                 <button type="button" data-tab-btn="about" class="admin-nav-item">Tentang</button>
             </nav>
-            <a href="/" class="mt-auto text-sm text-slate-500 hover:text-white transition-colors">&larr; Kembali ke Worker</a>
+            <a href="/" class="mt-auto text-sm text-slate-400 hover:text-white transition-colors">&larr; Kembali ke Worker</a>
         </div>
     </aside>
 
@@ -70,15 +70,15 @@
                 <div class="grid grid-cols-3 gap-3">
                     <div class="card text-center">
                         <p id="statSites" class="text-2xl font-bold text-white">—</p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori</p>
+                        <p class="text-xs text-slate-400 mt-1">Kategori</p>
                     </div>
                     <div class="card text-center">
                         <p id="statLinks" class="text-2xl font-bold text-indigo-400">—</p>
-                        <p class="text-xs text-slate-500 mt-1">Total link</p>
+                        <p class="text-xs text-slate-400 mt-1">Total link</p>
                     </div>
                     <div class="card text-center">
                         <p id="statHistory" class="text-2xl font-bold text-slate-200">—</p>
-                        <p class="text-xs text-slate-500 mt-1">Riwayat</p>
+                        <p class="text-xs text-slate-400 mt-1">Riwayat</p>
                     </div>
                 </div>
                 <div class="card text-sm text-slate-400 leading-relaxed">
@@ -87,10 +87,10 @@
                 <div class="card !p-0 overflow-hidden">
                     <div class="flex items-center justify-between p-4 border-b border-slate-800">
                         <h3 class="text-sm font-semibold text-white">Aktivitas terbaru</h3>
-                        <button type="button" class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" onclick="loadStats()">Muat ulang</button>
+                        <button type="button" class="btn btn--ghost !py-1 !px-2 text-xs" onclick="loadStats()">Muat ulang</button>
                     </div>
                     <div id="dashRecentActivity" class="p-4">
-                        <p class="text-sm text-slate-500">Memuat…</p>
+                        <p class="text-sm text-slate-400">Memuat…</p>
                     </div>
                 </div>
             </div>
@@ -121,14 +121,14 @@
                         <button type="button" class="btn btn--secondary" onclick="lmExportTxt()">Ekspor TXT</button>
                         <button type="button" class="btn btn--ghost" onclick="lmRemoveDuplicates()">Bersihkan duplikat</button>
                     </div>
-                    <p id="lmDupInfo" class="text-xs text-slate-500">Memeriksa duplikat…</p>
+                    <p id="lmDupInfo" class="text-xs text-slate-400">Memeriksa duplikat…</p>
                 </div>
 
                 <div class="card !p-0 overflow-hidden">
                     <div class="flex flex-wrap items-center gap-3 p-4 border-b border-slate-800">
                         <div class="relative flex-1 min-w-[180px]">
                             <input type="search" id="lmSearch" class="input pl-9" placeholder="Cari URL atau antrean…" aria-label="Cari link">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                         </div>
@@ -157,9 +157,9 @@
                         <p id="lmPageInfo" class="text-sm text-slate-400">Memuat…</p>
                         <div class="flex items-center gap-2">
                             <p id="lmSelectedCount" class="text-sm text-slate-400 mr-2">0 dipilih</p>
-                            <button type="button" class="btn btn--ghost !min-h-0 !py-1.5 !px-3 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" onclick="lmDeleteSelected()">Hapus terpilih</button>
-                            <button type="button" id="lmPrevBtn" class="btn btn--secondary !min-h-0 !py-1.5 !px-3 text-xs" onclick="lmSetPage(-1)">Sebelumnya</button>
-                            <button type="button" id="lmNextBtn" class="btn btn--secondary !min-h-0 !py-1.5 !px-3 text-xs" onclick="lmSetPage(1)">Berikutnya</button>
+                            <button type="button" class="btn btn--ghost !py-1.5 !px-3 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" onclick="lmDeleteSelected()">Hapus terpilih</button>
+                            <button type="button" id="lmPrevBtn" class="btn btn--secondary !py-1.5 !px-3 text-xs" onclick="lmSetPage(-1)">Sebelumnya</button>
+                            <button type="button" id="lmNextBtn" class="btn btn--secondary !py-1.5 !px-3 text-xs" onclick="lmSetPage(1)">Berikutnya</button>
                         </div>
                     </div>
                 </div>
@@ -175,7 +175,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-sm font-semibold text-white">Tambah / edit antrean</h3>
                         <button type="button" onclick="cancelEdit()" id="cancelEditBtn"
-                            class="btn btn--ghost !min-h-0 !py-2 hidden">Batal</button>
+                            class="btn btn--ghost !py-2 hidden">Batal</button>
                     </div>
                     <div class="space-y-4">
                         <div>
@@ -194,7 +194,7 @@
                         <label for="fileInput"
                             class="cursor-pointer flex flex-col items-center gap-2 py-8 px-4 border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl bg-slate-950/50 transition-colors">
                             <span class="text-sm font-semibold text-slate-300">Import TXT</span>
-                            <span class="text-xs text-slate-500 text-center">Pisah kategori dengan baris berisi <code class="text-indigo-400">-</code> saja</span>
+                            <span class="text-xs text-slate-400 text-center">Pisah kategori dengan baris berisi <code class="text-indigo-400">-</code> saja</span>
                         </label>
                     </div>
                 </div>
@@ -227,7 +227,7 @@
                 <div id="set-tab-umum" role="tabpanel" aria-labelledby="set-tabnav-umum" class="card space-y-4">
                     <div>
                         <h3 class="text-sm font-semibold text-white">Branding worker</h3>
-                        <p class="text-xs text-slate-500 mt-1">Tampil di header halaman worker dan judul tab browser.</p>
+                        <p class="text-xs text-slate-400 mt-1">Tampil di header halaman worker dan judul tab browser.</p>
                     </div>
                     <div>
                         <label class="label" for="setAppTitle">Judul aplikasi</label>
@@ -243,12 +243,12 @@
                 <div id="set-tab-runner" role="tabpanel" aria-labelledby="set-tabnav-runner" class="hidden card space-y-4">
                     <div>
                         <h3 class="text-sm font-semibold text-white">Perilaku runner</h3>
-                        <p class="text-xs text-slate-500 mt-1">Nilai awal yang dipakai worker saat dibuka. Pengguna masih bisa mengubahnya di layar runner.</p>
+                        <p class="text-xs text-slate-400 mt-1">Nilai awal yang dipakai worker saat dibuka. Pengguna masih bisa mengubahnya di layar runner.</p>
                     </div>
                     <div>
                         <label class="label" for="setDefaultInterval">Jeda runner default (detik)</label>
                         <input type="number" id="setDefaultInterval" min="1" max="120" value="3" class="input max-w-[8rem]">
-                        <p class="text-xs text-slate-500 mt-1">Rentang 1–120 detik. Server membulatkan nilai tidak valid ke 3.</p>
+                        <p class="text-xs text-slate-400 mt-1">Rentang 1–120 detik. Server membulatkan nilai tidak valid ke 3.</p>
                     </div>
                 </div>
 
@@ -256,7 +256,7 @@
                 <div id="set-tab-maintenance" role="tabpanel" aria-labelledby="set-tabnav-maintenance" class="hidden card space-y-4">
                     <div>
                         <h3 class="text-sm font-semibold text-white">Mode pemeliharaan</h3>
-                        <p class="text-xs text-slate-500 mt-1">Menampilkan banner di worker. Runner tetap berfungsi.</p>
+                        <p class="text-xs text-slate-400 mt-1">Menampilkan banner di worker. Runner tetap berfungsi.</p>
                     </div>
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="setMaintenanceMode" class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500">
@@ -265,7 +265,7 @@
                     <div>
                         <label class="label" for="setMaintenanceMsg">Pesan pemeliharaan</label>
                         <textarea id="setMaintenanceMsg" rows="2" maxlength="500" class="input"></textarea>
-                        <p class="text-xs text-slate-500 mt-1">Kosongkan untuk memakai pesan bawaan.</p>
+                        <p class="text-xs text-slate-400 mt-1">Kosongkan untuk memakai pesan bawaan.</p>
                     </div>
                 </div>
 
@@ -273,7 +273,7 @@
                 <div id="set-tab-security" role="tabpanel" aria-labelledby="set-tabnav-security" class="hidden card space-y-4">
                     <div>
                         <h3 class="text-sm font-semibold text-white">Google Safe Browsing</h3>
-                        <p class="text-xs text-slate-500 mt-1">Pemeriksaan ancaman dilakukan di sisi server saat link diuji. Kegagalan API tidak menghentikan runner.</p>
+                        <p class="text-xs text-slate-400 mt-1">Pemeriksaan ancaman dilakukan di sisi server saat link diuji. Kegagalan API tidak menghentikan runner.</p>
                     </div>
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="setGsbActive" class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500">
@@ -282,12 +282,12 @@
                     <div>
                         <label class="label" for="setGsbApiKey">API Key</label>
                         <input type="password" id="setGsbApiKey" class="input font-mono" placeholder="AIzaSy..." autocomplete="off">
-                        <p class="text-xs text-slate-500 mt-1">Disimpan di server dan tidak pernah dikirim ke worker tanpa autentikasi admin.</p>
+                        <p class="text-xs text-slate-400 mt-1">Disimpan di server dan tidak pernah dikirim ke worker tanpa autentikasi admin.</p>
                     </div>
                 </div>
 
                 <div class="card !p-4 flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-xs text-slate-500">Pengaturan jaringan, PWA, dan notifikasi belum punya opsi tersimpan di server. Yang bisa diatur ada di panel Sistem.</p>
+                    <p class="text-xs text-slate-400">Pengaturan jaringan, PWA, dan notifikasi belum punya opsi tersimpan di server. Yang bisa diatur ada di panel Sistem.</p>
                     <button type="button" onclick="saveSettings()" class="btn btn--primary">Simpan pengaturan</button>
                 </div>
             </div>
@@ -302,10 +302,10 @@
                 <div class="card space-y-3">
                     <h3 class="text-sm font-semibold text-white">Runtime</h3>
                     <dl class="text-sm divide-y divide-slate-800">
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Versi aplikasi</dt><dd id="sysVersion" class="text-slate-200">—</dd></div>
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Zona waktu</dt><dd class="text-slate-200">WIB (UTC+7)</dd></div>
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Penyimpanan</dt><dd id="sysStorage" class="text-slate-200">—</dd></div>
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Service worker</dt><dd id="sysSw" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Versi aplikasi</dt><dd id="sysVersion" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Zona waktu</dt><dd class="text-slate-200">WIB (UTC+7)</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Penyimpanan</dt><dd id="sysStorage" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Service worker</dt><dd id="sysSw" class="text-slate-200">—</dd></div>
                     </dl>
                 </div>
 
@@ -368,7 +368,7 @@
         </main>
 
         <footer class="border-t border-slate-800 mt-8 px-4 py-6 text-center">
-            <p class="text-xs text-slate-600">
+            <p class="text-xs text-slate-400">
                 &copy; <span id="adminFooterYear"></span>
                 <a href="https://signal.me/#eu/FpZSd_PViBDXqQBWjTRhw0PtNF47vL0YIcJb7960UjsTB8u-tLxO_oKmVspN2xvA" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:text-indigo-300">IDR-AH-B组 Artupski</a>
             </p>

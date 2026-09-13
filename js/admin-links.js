@@ -65,7 +65,7 @@ function lmRender() {
     if (!body) return;
 
     if (total === 0) {
-        body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">${
+        body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">${
             LM_STATE.search || LM_STATE.queueId ? 'Tidak ada link yang cocok dengan filter.' : 'Belum ada link. Tambahkan lewat form di atas.'
         }</td></tr>`;
     } else {
@@ -80,11 +80,11 @@ function lmRender() {
                         isDup ? ' <span class="badge badge--warning ml-1">duplikat</span>' : ''
                     }</td>
                     <td class="text-sm text-slate-400">${lmEsc(r.siteName)}</td>
-                    <td class="text-xs text-slate-500 tabular-nums">${r.index + 1}</td>
+                    <td class="text-xs text-slate-400 tabular-nums">${r.index + 1}</td>
                     <td>
                         <div class="flex items-center gap-1">
-                            <button type="button" class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" data-lm-copy="${lmEsc(r.url)}">Salin</button>
-                            <a class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" href="${lmEsc(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>
+                            <button type="button" class="btn btn--ghost !py-1 !px-2 text-xs" data-lm-copy="${lmEsc(r.url)}">Salin</button>
+                            <a class="btn btn--ghost !py-1 !px-2 text-xs" href="${lmEsc(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>
                         </div>
                     </td>
                 </tr>`;

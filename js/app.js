@@ -275,7 +275,7 @@ function renderSiteList() {
                 <button type="button" onclick="selectCat('${data.id}', this)"
                     class="btn btn--primary btn--block">${isFinished ? 'Buka' : 'Lanjut'}</button>
                 <button type="button" onclick="resetProgress('${data.id}')"
-                    class="btn btn--ghost !min-h-0 !py-2" title="Reset progres">↻ Reset</button>
+                    class="btn btn--ghost !py-2" title="Reset progres">↻ Reset</button>
             </div>
         `;
         list.appendChild(card);
@@ -1065,7 +1065,7 @@ function renderHistory() {
                 <td><span class="badge ${actionClass}">${escapeHtml(item.action)}</span></td>
                 <td class="font-medium text-white truncate max-w-[16rem]">${escapeHtml(item.site_name)}</td>
                 <td class="text-sm text-slate-300">${diffStr}</td>
-                <td class="text-xs text-slate-500 whitespace-nowrap">${date} WIB</td>
+                <td class="text-xs text-slate-400 whitespace-nowrap">${date} WIB</td>
             `;
             tbody.appendChild(tr);
         });
