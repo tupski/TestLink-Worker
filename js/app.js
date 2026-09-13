@@ -19,6 +19,8 @@ let deadlineWatchId = null;
 let countdownDeadlineMs = null;
 let countdownFiring = false;
 let modeAuto = false; // False = Fokus Tab, True = Otomatis Jeda
+/** State UI runner: idle | ping | ready | running | paused | waiting-focus | validating | completed */
+let runnerState = 'idle';
 let awaitingValidation = false;
 let validatingUrl = "";
 let awaitingFocusReturn = false;
@@ -270,7 +272,7 @@ function renderSiteList() {
 
 // SELEKSI SITUS & RUNNER
 function selectCat(id, el) {
-    if (isRunning || pingInProgress) return alert("Hentikan proses yang berjalan dulu!");
+    if (isRunning || pingInProgress) return showToast("Hentikan proses yang berjalan dulu!");
     if (el) el.classList.add('btn-click-feedback');
 
     setTimeout(() => {
@@ -278,31 +280,127 @@ function selectCat(id, el) {
         const data = categories[id];
         document.getElementById('statusCard').classList.remove('hidden');
         document.getElementById('activeCatTitle').innerText = data.name;
-        
+
         window.clearSafeBrowsingReport(); // Clear if switching category
 
         if (data.lastIndex >= data.links.length) {
-            finishPingPhase();
+            runnerState = 'completed';
         } else {
-            document.getElementById('pingControls').classList.remove('hidden');
-            document.getElementById('runnerControls').classList.add('hidden');
+            runnerState = 'ping';
         }
-        
-        updateRunnerUI();
+
+        renderRunnerState();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 200);
 }
 
-function updateRunnerUI() {
+// STATE RUNNER: ping | ready | running | paused | waiting-focus | validating | completed
+const RUNNER_BADGE = {
+    ping: ['Pengecekan', 'badge--neutral'],
+    ready: ['Siap', 'badge--neutral'],
+    running: ['Berjalan', 'badge--success'],
+    paused: ['Jeda', 'badge--warning'],
+    'waiting-focus': ['Menunggu tab', 'badge--warning'],
+    validating: ['Validasi', 'badge--warning'],
+    completed: ['Selesai', 'badge--success']
+};
+
+function renderRunnerState() {
     const data = categories[activeCatId];
     if (!data) return;
-    
-    document.getElementById('counter').innerText = `${data.lastIndex}/${data.links.length}`;
-    document.getElementById('currentLink').innerText = data.links[data.lastIndex - 1] || "Siap Dimulai";
-    document.getElementById('nextLinkSingle').innerText = data.links[data.lastIndex] || "SELESAI KESELURUHAN";
-    
-    const startBtn = document.getElementById('startAutoBtn');
-    if (startBtn) startBtn.innerText = `Mulai Runner ${data.name.replace(/^Kategori\s+/i, '')}`;
+
+    const total = data.links.length;
+    document.getElementById('counter').innerText = `${data.lastIndex}/${total}`;
+    const pct = total ? Math.min(100, Math.round((data.lastIndex / total) * 100)) : 0;
+    const bar = document.getElementById('runnerProgressBar');
+    if (bar) bar.style.width = pct + '%';
+
+    document.getElementById('currentLink').innerText =
+        data.lastIndex > 0 ? (data.links[data.lastIndex - 1] || '') : 'Tunggu untuk memulai...';
+    document.getElementById('nextLinkSingle').innerText = data.links[data.lastIndex] || 'Selesai';
+
+    const badge = document.getElementById('runnerStateBadge');
+    const [text, cls] = RUNNER_BADGE[runnerState] || ['Siap', 'badge--neutral'];
+    badge.className = 'badge ' + cls + ' shrink-0 mt-1';
+    badge.innerText = text;
+
+    const inRunnerPhase = ['ready', 'running', 'paused', 'waiting-focus', 'validating'].includes(runnerState);
+    document.getElementById('pingControls').classList.toggle('hidden', runnerState !== 'ping');
+    document.getElementById('runnerControls').classList.toggle('hidden', !inRunnerPhase);
+    document.getElementById('completedControls').classList.toggle('hidden', runnerState !== 'completed');
+
+    if (inRunnerPhase) {
+        const startBtn = document.getElementById('startAutoBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const showStart = runnerState === 'ready' || runnerState === 'paused';
+        startBtn.classList.toggle('hidden', !showStart);
+        startBtn.innerText = runnerState === 'paused' ? 'Lanjut' : 'Mulai';
+        pauseBtn.classList.toggle('hidden', runnerState !== 'running');
+    }
+
+    // Konfigurasi hanya bisa diubah saat tidak berjalan
+    const locked = ['running', 'paused', 'waiting-focus', 'validating'].includes(runnerState);
+    const modeToggle = document.getElementById('modeToggle');
+    const mvToggle = document.getElementById('manualValidationToggle');
+    if (modeToggle) modeToggle.disabled = locked;
+    if (mvToggle) mvToggle.disabled = locked || modeAuto;
+}
+
+function startRunner() {
+    const data = categories[activeCatId];
+    if (!data || data.lastIndex >= data.links.length) {
+        showToast('Antrean ini sudah selesai.');
+        return;
+    }
+
+    isRunning = true;
+    runnerState = 'running';
+    document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-indigo-500 animate-pulse';
+    document.getElementById('focusStatus').innerText = 'Runner berjalan';
+
+    renderRunnerState();
+    triggerNextWithCountdown();
+}
+
+function pauseRunner() {
+    if (!isRunning) return;
+    isRunning = false;
+    stopDeadlineWatch();
+    countdownDeadlineMs = null;
+    countdownFiring = false;
+    document.getElementById('countdownBox').classList.add('hidden');
+    document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-amber-500';
+    document.getElementById('focusStatus').innerText = 'Dijeda';
+    runnerState = 'paused';
+    renderRunnerState();
+}
+
+function stopRunner() {
+    isRunning = false; awaitingValidation = false; awaitingFocusReturn = false;
+    stopDeadlineWatch();
+    countdownDeadlineMs = null;
+    countdownFiring = false;
+    document.getElementById('countdownBox').classList.add('hidden');
+    document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-slate-600';
+    document.getElementById('focusStatus').innerText = 'Standby';
+    runnerState = 'ready';
+    renderRunnerState();
+}
+
+function runAgain() {
+    const data = categories[activeCatId];
+    if (!data) return;
+    data.lastIndex = 0;
+    data.normal = 0;
+    data.error = 0;
+    data.skippedLinks = [];
+    finalizeAction().then(() => startRunner());
+}
+
+function backToQueues() {
+    document.getElementById('statusCard').classList.add('hidden');
+    runnerState = 'idle';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // LOGIKA RUNNER & MODE TOGGLES
@@ -336,32 +434,12 @@ function decrementInterval() {
     if (parseInt(el.value) > 1) el.value = parseInt(el.value) - 1; 
 }
 
-function toggleAutoPilot() {
-    if (isRunning) return;
-    const data = categories[activeCatId];
-    if (!data || data.lastIndex >= data.links.length) return alert("Situs ini sudah selesai.");
-
-    isRunning = true;
-    document.getElementById('statusIndicator').className = "w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)] animate-pulse";
-    document.getElementById('focusStatus').innerText = "Runner Berjalan...";
-
-    triggerNextWithCountdown();
-}
-
-function stopAutoPilot() {
-    isRunning = false; awaitingValidation = false; awaitingFocusReturn = false;
-    stopDeadlineWatch();
-    countdownDeadlineMs = null;
-    document.getElementById('countdownBox').classList.add('hidden');
-    document.getElementById('statusIndicator').className = "w-1.5 h-1.5 rounded-full bg-slate-700";
-    document.getElementById('focusStatus').innerText = "Standby / Berhenti";
-    updateRunnerUI();
-}
-
 function triggerNextWithCountdown() {
     const data = categories[activeCatId];
     if (!isRunning || !data || data.lastIndex >= data.links.length) return;
 
+    runnerState = 'running';
+    renderRunnerState();
     const box = document.getElementById('countdownBox');
     const sec = parseInt(document.getElementById('intervalInput').value, 10) || 3;
     countdownDeadlineMs = Date.now() + Math.max(1, sec) * 1000;
@@ -429,7 +507,9 @@ async function executeOpenLink() {
                 return;
             }
             awaitingFocusReturn = true;
-            document.getElementById('focusStatus').innerText = "MENUNGGU ANDA KEMBALI KE TAB...";
+            runnerState = 'waiting-focus';
+            renderRunnerState();
+            document.getElementById('focusStatus').innerText = 'Menunggu kembali ke tab';
         }
     } finally {
         countdownFiring = false;
@@ -458,6 +538,8 @@ document.addEventListener('visibilitychange', () => {
             if (manual) {
                 awaitingValidation = true;
                 validatingUrl = url;
+                runnerState = 'validating';
+                renderRunnerState();
                 document.getElementById('validationBox').classList.remove('hidden');
                 document.getElementById('validatingLink').innerText = url;
             } else {
@@ -477,6 +559,8 @@ async function submitValidation(status) {
     if (!awaitingValidation) return;
     awaitingValidation = false;
     document.getElementById('validationBox').classList.add('hidden');
+    runnerState = 'running';
+    renderRunnerState();
     
     const data = categories[activeCatId];
     if (status === 'normal') data.normal++; 
@@ -490,7 +574,7 @@ async function submitValidation(status) {
 }
 
 async function finalizeAction() {
-    updateRunnerUI();
+    renderRunnerState();
     const data = categories[activeCatId];
     try {
         await fetch(`${API_BASE}/api/progress`, {
@@ -509,9 +593,15 @@ async function finalizeAction() {
 
 function finishJobs() {
     isRunning = false;
-    showToast('Antrian selesai. Mantap!');
-    alert("Test Link Selesai dilakukan.");
-    stopAutoPilot();
+    stopDeadlineWatch();
+    countdownDeadlineMs = null;
+    countdownFiring = false;
+    document.getElementById('countdownBox').classList.add('hidden');
+    document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-emerald-500';
+    document.getElementById('focusStatus').innerText = 'Selesai';
+    runnerState = 'completed';
+    renderRunnerState();
+    showToast('Antrean selesai. Semua link sudah dibuka.');
 }
 
 window.clearSafeBrowsingReport = function() {
@@ -858,9 +948,8 @@ function closePingModal() {
 }
 
 function finishPingPhase() {
-    document.getElementById('pingControls').classList.add('hidden');
-    document.getElementById('runnerControls').classList.remove('hidden');
-    updateRunnerUI();
+    runnerState = 'ready';
+    renderRunnerState();
 }
 
 // RIWAYAT AKTIVITAS - PAGINATION & CLEANUP
@@ -967,7 +1056,7 @@ function showDiffDetails(globalIdx, type) {
 function closeDiff() { document.getElementById('diffModal').classList.add('hidden'); }
 
 async function resetProgress(siteId) {
-    if (isRunning || pingInProgress) return alert('Stop runner atau ping dulu sebelum reset.');
+    if (isRunning || pingInProgress) return showToast('Stop runner atau ping dulu sebelum reset.');
     if (!confirm('Reset ulang progres pengetesan situs ini?')) return;
     categories[siteId].lastIndex = 0;
     categories[siteId].normal = 0;

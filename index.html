@@ -47,151 +47,132 @@
     <div class="app-container">
 
         <!-- Main Runner Card -->
-        <div id="statusCard"
-            class="hidden bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 mb-8 shadow-2xl animate-fade-in relative overflow-hidden">
-            <div class="flex justify-between items-center mb-6 relative z-10 gap-4">
-                <div class="truncate flex-1">
-                    <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Situs</p>
-                    <h2 id="activeCatTitle" class="text-2xl font-black text-white truncate italic">Situs</h2>
-                </div>
+        <div id="statusCard" class="hidden card !p-6 sm:!p-8 mb-8 animate-fade-in">
 
-                <!-- Small Countdown Timer -->
-                <div id="countdownBox"
-                    class="hidden flex flex-col items-center justify-center px-4 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl animate-border-glow min-w-[70px]">
-                    <p class="text-[7px] text-indigo-400 font-black uppercase tracking-widest mb-0.5">Next</p>
-                    <div id="countdownNumber" class="text-sm font-black text-white italic font-mono">3.00</div>
+            <!-- Runner Header -->
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div class="min-w-0">
+                    <p class="label !mb-0.5">Kategori</p>
+                    <h2 id="activeCatTitle" class="text-lg font-bold text-white truncate">Situs</h2>
                 </div>
-
-                <div class="text-right flex-1">
-                    <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Total</p>
-                    <span id="counter" class="text-2xl font-black text-indigo-500 font-mono italic">0/0</span>
-                </div>
+                <div id="runnerStateBadge" class="badge badge--neutral shrink-0 mt-1" role="status">Siap</div>
             </div>
 
-            <!-- Focus Display -->
-            <div
-                class="bg-slate-950 p-6 rounded-[2rem] border border-slate-800/50 mb-6 shadow-inner text-center relative z-10">
-                <p class="text-[9px] text-indigo-400 font-black uppercase tracking-[0.3em] mb-3">Pengetesan Saat Ini</p>
-                <p id="currentLink" class="text-xs font-mono text-slate-400 truncate opacity-60 mb-2">Tunggu untuk
-                    memulai...</p>
-                <div class="h-px bg-slate-800 w-12 mx-auto my-4 opacity-50"></div>
-                <p class="text-[9px] text-amber-500 font-black uppercase tracking-[0.3em] mb-1">Antrean Berikutnya</p>
-                <p id="nextLinkSingle" class="text-sm font-black text-slate-200 truncate uppercase">---</p>
+            <!-- Progress -->
+            <div class="flex items-center gap-3 mb-5">
+                <div class="progress flex-1" aria-hidden="true">
+                    <div id="runnerProgressBar" class="progress__bar" style="width:0%"></div>
+                </div>
+                <span id="counter" class="text-sm font-semibold text-slate-300 tabular-nums shrink-0">0/0</span>
             </div>
 
-            <!-- Blocked Links Report (below test box) -->
-            <div id="sbReportBox"
-                class="hidden bg-slate-950 border border-slate-800 p-6 rounded-[2rem] mb-6 relative z-10 shadow-2xl">
-                <div class="flex items-center justify-between gap-4 mb-4">
+            <!-- Current & Next URL -->
+            <div class="rounded-lg bg-slate-950 border border-slate-800 p-4 mb-5 space-y-3">
+                <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-[9px] text-red-400 font-black uppercase tracking-widest">Link Terdeteksi Blokir</p>
-                        <p class="text-[8px] text-slate-500 font-bold uppercase mt-1 truncate">Kemungkinan false positive (test manual)</p>
+                        <p class="label !mb-0.5">Sedang diuji</p>
+                        <p id="currentLink" class="text-xs font-mono text-slate-300 truncate">Tunggu untuk memulai...</p>
                     </div>
-                    <button type="button" onclick="clearSafeBrowsingReport()"
-                        class="shrink-0 bg-slate-900 hover:bg-slate-800 text-slate-400 font-black px-3 py-2 rounded-xl border border-slate-700 text-[9px] uppercase tracking-widest transition-colors">
-                        Bersihkan
-                    </button>
+                    <div id="countdownBox" class="hidden text-right shrink-0">
+                        <p class="text-[11px] text-slate-500">Buka berikutnya</p>
+                        <div id="countdownNumber" class="text-lg font-semibold text-indigo-400 font-mono tabular-nums">3.00</div>
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-800">
+                    <p class="label !mb-0.5">Berikutnya</p>
+                    <p id="nextLinkSingle" class="text-xs font-mono text-slate-500 truncate">---</p>
+                </div>
+            </div>
+
+            <!-- Blocked Links Report -->
+            <div id="sbReportBox" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-4 mb-5">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold text-red-400">Link terdeteksi blokir</p>
+                        <p class="text-[11px] text-slate-500 mt-0.5 truncate">Kemungkinan false positive, uji manual</p>
+                    </div>
+                    <button type="button" onclick="clearSafeBrowsingReport()" class="btn btn--ghost !min-h-0 !py-2 shrink-0">Bersihkan</button>
                 </div>
                 <div id="sbReportList" class="space-y-2"></div>
             </div>
 
             <!-- Mode Controls -->
-            <div class="space-y-4 mb-6 relative z-10">
-                <!-- Mode Toggle -->
-                <div
-                    class="flex items-center justify-between bg-slate-800/20 p-4 rounded-2xl border border-slate-800/50">
-                    <div>
-                        <p class="text-[9px] font-black text-white uppercase tracking-widest">Mode Operasi</p>
-                        <p id="modeDesc" class="text-[8px] text-slate-500 font-bold uppercase mt-1">Buka link di tab
-                            baru, lalu kembali ke tab ini untuk lanjut</p>
+            <div class="space-y-3 mb-5">
+                <div class="flex items-center justify-between gap-4 rounded-lg bg-slate-950/60 border border-slate-800 p-4">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-white">Mode operasi</p>
+                        <p id="modeDesc" class="text-xs text-slate-500 mt-0.5">Buka link di tab baru, lalu kembali ke tab ini untuk lanjut</p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="modeToggle" class="sr-only peer">
-                        <div
-                            class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600">
-                        </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="modeToggle" class="sr-only peer" aria-label="Mode otomatis jeda">
+                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                 </div>
 
-                <!-- Manual Validation Toggle -->
-                <div id="manualValidationCtrl"
-                    class="flex items-center justify-between bg-slate-800/20 p-4 rounded-2xl border border-slate-800/50 transition-all">
-                    <div>
-                        <p class="text-[9px] font-black text-white uppercase tracking-widest">Validasi Manual</p>
-                        <p class="text-[8px] text-slate-500 font-bold uppercase mt-1">Konfirmasi link gagal/ok manual
-                        </p>
+                <div id="manualValidationCtrl" class="flex items-center justify-between gap-4 rounded-lg bg-slate-950/60 border border-slate-800 p-4 transition-all">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-white">Validasi manual</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Konfirmasi hasil normal/gagal untuk setiap link</p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="manualValidationToggle" class="sr-only peer">
-                        <div
-                            class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600">
-                        </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="manualValidationToggle" class="sr-only peer" aria-label="Validasi manual">
+                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                 </div>
 
-                <!-- Interval Input -->
-                <div id="intervalSection"
-                    class="flex items-center gap-4 bg-slate-800/30 p-2 rounded-2xl border border-slate-800/50">
-                    <span class="flex-1 text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Jeda Waktu
-                        (Detik)</span>
-                    <div class="flex items-center bg-slate-950 rounded-xl border border-slate-800">
-                        <button onclick="decrementInterval()"
-                            class="px-3 py-2 text-indigo-400 font-black hover:text-white">-</button>
-                        <input id="intervalInput" type="number" value="3" min="1"
-                            class="w-10 bg-transparent text-center font-black text-white text-sm outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                        <button onclick="incrementInterval()"
-                            class="px-3 py-2 text-indigo-400 font-black hover:text-white">+</button>
+                <div id="intervalSection" class="flex items-center justify-between gap-4 rounded-lg bg-slate-950/60 border border-slate-800 p-4">
+                    <span class="text-sm text-slate-400">Jeda waktu</span>
+                    <div class="flex items-center rounded-lg bg-slate-950 border border-slate-800">
+                        <button type="button" onclick="decrementInterval()" aria-label="Kurangi jeda" class="px-3.5 py-2.5 text-indigo-400 font-semibold hover:text-white">-</button>
+                        <input id="intervalInput" type="number" value="3" min="1" aria-label="Jeda dalam detik"
+                            class="w-10 bg-transparent text-center font-semibold text-white text-sm outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <button type="button" onclick="incrementInterval()" aria-label="Tambah jeda" class="px-3.5 py-2.5 text-indigo-400 font-semibold hover:text-white">+</button>
                     </div>
                 </div>
-
-
             </div>
 
-            <!-- Runner Buttons -->
-            <div id="pingControls" class="flex flex-col gap-3 relative z-10">
-                <button onclick="openPingModal()"
-                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-500/10 active:scale-95 transition-all text-[11px] uppercase tracking-widest">Cek
-                    Link Otomatis</button>
-                <button onclick="finishPingPhase()"
-                    class="text-slate-500 hover:text-slate-300 font-black py-2 text-[9px] uppercase tracking-widest transition-colors">Langsung
-                    Test Manual</button>
+            <!-- Fase Ping -->
+            <div id="pingControls" class="flex flex-col gap-3">
+                <button type="button" onclick="openPingModal()" class="btn btn--primary btn--block">Cek Link Otomatis</button>
+                <button type="button" onclick="finishPingPhase()" class="btn btn--ghost btn--block">Langsung Test Manual</button>
             </div>
 
-            <div id="runnerControls" class="grid grid-cols-2 gap-3 hidden relative z-10">
-                <button id="startAutoBtn" onclick="toggleAutoPilot()"
-                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-[11px] uppercase tracking-widest">Mulai</button>
-                <button onclick="stopAutoPilot()"
-                    class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-black py-4 rounded-2xl active:scale-95 transition-all text-[11px] uppercase tracking-widest">Stop</button>
+            <!-- Fase Runner -->
+            <div id="runnerControls" class="grid grid-cols-2 gap-3 hidden">
+                <button type="button" id="startAutoBtn" onclick="startRunner()" class="btn btn--primary">Mulai</button>
+                <button type="button" id="pauseBtn" onclick="pauseRunner()" class="btn btn--secondary hidden">Jeda</button>
+                <button type="button" onclick="stopRunner()" class="btn btn--secondary">Stop</button>
+            </div>
+
+            <!-- Fase Selesai -->
+            <div id="completedControls" class="grid grid-cols-2 gap-3 hidden">
+                <button type="button" onclick="runAgain()" class="btn btn--primary">Ulangi dari awal</button>
+                <button type="button" onclick="backToQueues()" class="btn btn--secondary">Kembali ke antrean</button>
             </div>
 
             <!-- Manual Validation Box -->
-            <div id="validationBox"
-                class="hidden mt-6 bg-slate-950 border border-slate-800 p-6 rounded-[2rem] text-center animate-fade-in relative z-10 shadow-2xl">
-                <p class="text-[9px] text-indigo-400 font-black uppercase tracking-widest mb-3">Verifikasi Hasil:</p>
-                <p id="validatingLink" class="text-xs font-black text-white truncate mb-6">---</p>
+            <div id="validationBox" class="hidden mt-5 bg-slate-950 border border-slate-800 rounded-lg p-5 text-center animate-fade-in">
+                <p class="text-xs font-semibold text-indigo-400 mb-2">Verifikasi hasil</p>
+                <p id="validatingLink" class="text-xs font-mono text-white truncate mb-5">---</p>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="submitValidation('normal')"
-                        class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-xl font-black text-[9px] uppercase transition-all flex flex-col items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
-                            </path>
+                    <button type="button" onclick="submitValidation('normal')"
+                        class="btn !bg-emerald-500/10 hover:!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/20 flex-col !gap-1 !py-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
                         Normal
                     </button>
-                    <button onclick="submitValidation('blokir')"
-                        class="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-xl font-black text-[9px] uppercase transition-all flex flex-col items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-8a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    <button type="button" onclick="submitValidation('blokir')"
+                        class="btn !bg-red-500/10 hover:!bg-red-500/20 !text-red-400 !border-red-500/20 flex-col !gap-1 !py-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
                         </svg>
                         Blokir
                     </button>
-                    <button onclick="submitValidation('error')"
-                        class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 py-4 rounded-xl font-black text-[9px] uppercase transition-all flex flex-col items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
-                            </path>
+                    <button type="button" onclick="submitValidation('error')"
+                        class="btn !bg-amber-500/10 hover:!bg-amber-500/20 !text-amber-400 !border-amber-500/20 flex-col !gap-1 !py-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
                         Error
                     </button>
