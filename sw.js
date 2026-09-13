@@ -1,5 +1,5 @@
 /* Minimal SW — cache shell app; bump CACHE untuk invalidate */
-const CACHE = 'testlink-v3';
+const CACHE = 'testlink-v4';
 const ASSETS = ['/', '/index.html', '/about.html', '/CHANGELOG.md', '/css/styles.css', '/js/app.js', '/js/countdown-worker.js', '/manifest.webmanifest', '/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {

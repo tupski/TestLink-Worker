@@ -6,7 +6,7 @@ Library: Preline UI free (`docs/UI_LIBRARY_DECISION.md`). Desain: `docs/DESIGN_S
 ## Fasa
 
 - [x] **Fasa 0 — Audit** (2026-09-13): audit repo + `UI_UX_AUDIT.md` + `UI_LIBRARY_DECISION.md` + `DESIGN_SYSTEM.md` + `PLAN.md`. Tanpa perubahan UI.
-- [ ] **Fasa 1 — Foundation**: integrasi Preline free, token desain (tipografi, spasi, warna), komponen reusable, state responsif. Verifikasi aplikasi masih jalan.
+- [x] **Fasa 1 — Foundation** (2026-09-13): Preline free (CDN `preline@2`) di 3 halaman, token desain + komponen di `css/styles.css` (palet, tipografi 14px, radius 8/12/16, focus-visible, reduced-motion, .btn/.card/.input/.badge/.table/.empty-state/.progress), hapus gradient/glow/glass berlebih, font non-italic, SW cache bump v4. Verifikasi: server lokal 200 di `/`, `/admin.html`, `/about.html`, `/css/styles.css`, `/api/*`; Preline script & font baru tersaji.
 - [ ] **Fasa 2 — App Shell**: sidebar desktop (admin), header/navigasi mobile, layout halaman, sistem toast/dialog global. Perilaku runner belum diubah.
 - [ ] **Fasa 3 — Runner Redesign**: state Idle/Running/Paused/Completed eksplisit, countdown, progres; pertahankan navigasi nyata, manual mode, otomatis mode, pause/resume/stop. Prioritas tertinggi.
 - [ ] **Fasa 4 — Queue & Link Manager**: UI antrean (Queue), link manager (search, pagination, filter, bulk, TXT import/export, duplikat), empty/error states.
