@@ -9,6 +9,17 @@ let deviceId = localStorage.getItem('__linkflow_uuid') || (() => {
     return id;
 })();
 
+// Escape HTML untuk mencegah XSS (R-38, best practice)
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s)
+        .replaceAll('&', '&')
+        .replaceAll('<', '<')
+        .replaceAll('>', '>')
+        .replaceAll('"', '"')
+        .replaceAll("'", '&#039;');
+}
+
 // Status Global
 let sitesData = [];
 let categories = {};
@@ -975,16 +986,36 @@ async function loadHistory() {
 
 async function openHistory() {
     document.getElementById('historyModal').classList.remove('hidden');
+    if (typeof HSOverlay !== 'undefined') {
+        const modal = document.getElementById('historyModal');
+        HSOverlay.open(modal);
+    }
     await loadHistory();
     await clearHistoryBadgeSeen();
+}
+
+function closeHistoryModal() {
+    document.getElementById('historyModal').classList.add('hidden');
+    if (typeof HSOverlay !== 'undefined') {
+        const modal = document.getElementById('historyModal');
+        HSOverlay.close(modal);
+    }
 }
 
 function renderHistory() {
     const container = document.getElementById('historyModalDisplay');
     if (!container) return;
-    container.innerHTML = "";
 
-    const filteredData = histData;
+    let filteredData = histData;
+    const searchTerm = document.getElementById('histSearch')?.value.toLowerCase() || '';
+    if (searchTerm) {
+        filteredData = histData.filter(item =>
+            (item.site_name || '').toLowerCase().includes(searchTerm) ||
+            (item.diff_summary || '').toLowerCase().includes(searchTerm) ||
+            (item.action || '').toLowerCase().includes(searchTerm)
+        );
+    }
+
     const totalPages = Math.ceil(filteredData.length / histPageSize) || 1;
     if (histCurrentPage > totalPages) histCurrentPage = totalPages;
 
@@ -993,42 +1024,58 @@ function renderHistory() {
     const currentItems = filteredData.slice(start, end);
 
     if (currentItems.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic text-center p-10">Belum ada riwayat dalam 7 hari terakhir.</p>`;
+        container.innerHTML = `<div class="empty-state"><span class="empty-state__title">${searchTerm ? 'Tidak ada hasil untuk pencarian' : 'Belum ada riwayat dalam 7 hari terakhir.'}</span></div>`;
     } else {
+        container.innerHTML = `
+            <table class="table min-w-[600px]">
+                <thead>
+                    <tr>
+                        <th class="w-20">Aksi</th>
+                        <th>Antrean</th>
+                        <th>Ringkasan</th>
+                        <th class="w-40">Waktu</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        `;
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+
         currentItems.forEach((item, idx) => {
-            let diffStr = item.diff_summary;
+            let diffStr = escapeHtml(item.diff_summary || '');
             let p = { added: [], removed: [] };
             try { p = JSON.parse(item.diff_details || '{}'); } catch (e) {}
 
             if (p.added && p.added.length > 0) {
-                diffStr = diffStr.replace(/(\+\d+\slink)/gi, `<span onclick="showDiffDetails(${start + idx}, 'added')" class="text-emerald-500 underline cursor-pointer hover:text-emerald-400 bg-emerald-500/10 px-1 rounded">$1</span>`);
+                diffStr = diffStr.replace(/(\+\d+\slink)/gi, `<span onclick="showDiffDetails(${start + idx}, 'added')" class="text-emerald-400 underline cursor-pointer hover:text-emerald-300 bg-emerald-500/10 px-1 rounded">$1</span>`);
             }
             if (p.removed && p.removed.length > 0) {
-                diffStr = diffStr.replace(/(-\d+\slink\shapus)/gi, `<span onclick="showDiffDetails(${start + idx}, 'removed')" class="text-red-500 underline cursor-pointer hover:text-red-400 bg-red-500/10 px-1 rounded">$1</span>`);
+                diffStr = diffStr.replace(/(-\d+\slink\shapus)/gi, `<span onclick="showDiffDetails(${start + idx}, 'removed')" class="text-red-400 underline cursor-pointer hover:text-red-300 bg-red-500/10 px-1 rounded">$1</span>`);
             }
 
             const date = new Date(item.created_at).toLocaleString('id-ID', {
                 day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
 
-            const entry = document.createElement('div');
-            entry.className = "mb-4 pb-4 border-b border-slate-800/50 last:border-0";
-            entry.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-[7px] font-black uppercase px-2 py-0.5 rounded ${item.action === 'ADD' ? 'bg-emerald-500/20 text-emerald-500' : item.action === 'EDIT' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-red-500/20 text-red-500'}">${item.action}</span>
-                    <span class="text-[8px] text-slate-600 font-bold uppercase">${date} WIB</span>
-                </div>
-                <h4 class="text-xs font-black text-white italic uppercase tracking-tighter mb-1">${item.site_name}</h4>
-                <p class="text-[10px] text-slate-400 leading-relaxed font-sans">${diffStr}</p>
+            const actionClass = item.action === 'ADD' ? 'badge--success' : item.action === 'EDIT' ? 'badge--neutral' : 'badge--danger';
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-900/50';
+            tr.innerHTML = `
+                <td><span class="badge ${actionClass}">${escapeHtml(item.action)}</span></td>
+                <td class="font-medium text-white truncate max-w-[16rem]">${escapeHtml(item.site_name)}</td>
+                <td class="text-sm text-slate-300">${diffStr}</td>
+                <td class="text-xs text-slate-500 whitespace-nowrap">${date} WIB</td>
             `;
-            container.appendChild(entry);
+            tbody.appendChild(tr);
         });
     }
 
     // Update Pagination UI
     const pageInfo = document.getElementById('histPageInfo');
     if (pageInfo) pageInfo.innerText = `Halaman ${histCurrentPage} dari ${totalPages}`;
-    
+
     document.getElementById('prevHistBtn').disabled = histCurrentPage <= 1;
     document.getElementById('nextHistBtn').disabled = histCurrentPage >= totalPages;
 }
