@@ -4,8 +4,9 @@
   "description": "",
   "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.js",
-    "deploy:cf": "cd cloudflare && npx wrangler deploy",
+  "start": "node api/index.js",
+  "build:css": "tailwindcss -i ./css/tailwind.css -o ./css/tailwind-built.css --minify",
+  "deploy:cf": "cd cloudflare && npx wrangler deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,5 +19,9 @@
     "express": "^5.2.1",
     "sqlite3": "5.1.7",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "preline": "^2.5.1",
+    "tailwindcss": "^3.4.17"
   }
 }

@@ -55,17 +55,17 @@ function getHeaders() {
 function showTab(tabId) {
     document.querySelectorAll('[data-tab-btn]').forEach((btn) => {
         const on = btn.getAttribute('data-tab-btn') === tabId;
-        btn.classList.toggle('bg-indigo-600', on);
-        btn.classList.toggle('text-white', on);
-        btn.classList.toggle('shadow-lg', on);
-        btn.classList.toggle('shadow-indigo-900/30', on);
-        btn.classList.toggle('bg-slate-900', !on);
-        btn.classList.toggle('text-slate-500', !on);
-        btn.classList.toggle('border-slate-800', !on);
+        btn.classList.toggle('admin-nav-item--active', on);
+        btn.setAttribute('aria-current', on ? 'page' : 'false');
     });
     document.querySelectorAll('[data-tab-panel]').forEach((panel) => {
         panel.classList.toggle('hidden', panel.getAttribute('data-tab-panel') !== tabId);
     });
+    // Tutup drawer di mobile setelah memilih menu
+    if (window.innerWidth < 1024 && typeof HSOverlay !== 'undefined') {
+        const sidebar = document.getElementById('adminSidebar');
+        if (sidebar) HSOverlay.close(sidebar);
+    }
     if (tabId === 'dash') loadStats();
     if (tabId === 'settings') loadSettingsForm();
     if (tabId === 'history') loadServerHistoryTable();
