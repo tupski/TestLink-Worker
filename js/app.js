@@ -220,10 +220,10 @@ async function loadSites() {
 function renderSiteList() {
     const list = document.getElementById('listDisplay');
     if (!list) return;
-    list.innerHTML = "";
+    list.innerHTML = '';
 
     if (sitesData.length === 0) {
-        list.innerHTML = `<p class="text-sm text-slate-500 italic p-10 text-center border-dashed border-2 border-slate-800 rounded-[2.5rem]">Belum ada data masuk.</p>`;
+        list.innerHTML = `<div class="empty-state"><span class="empty-state__title">Belum ada antrean</span>Buat antrean baru di <a href="admin.html" class="text-indigo-400 hover:underline">Panel Admin</a>.</div>`;
         return;
     }
 
@@ -245,25 +245,27 @@ function renderSiteList() {
             : Math.min(100, Math.round((data.lastIndex / data.links.length) * 100));
 
         const card = document.createElement('div');
-        card.className = `site-card relative overflow-hidden flex items-center justify-between p-6 bg-slate-900 border ${isFinished ? 'border-emerald-500/20 opacity-80' : 'border-slate-800 shadow-xl'} rounded-[2rem] animate-fade-in transition-all hover:bg-slate-800/50`;
-        
+        card.className = `site-card flex items-center justify-between p-4 ${isFinished ? 'border-emerald-500/20 opacity-80' : ''}`;
+
         card.innerHTML = `
-            <div class="flex-1 truncate">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-[7px] font-black uppercase text-indigo-400 tracking-[0.2em]">DATABASE</span>
-                    ${isFinished ? '<span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-500 text-[6px] font-black rounded uppercase">Selesai</span>' : ''}
+            <div class="flex-1 truncate min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="label !mb-0">Antrean</span>
+                    ${isFinished ? '<span class="badge badge--success">Selesai</span>' : ''}
                 </div>
-                <h3 class="font-black text-white text-base truncate uppercase tracking-tighter italic mb-3">${data.name.replace(/^Kategori\s+/i, '')}</h3>
+                <h3 class="font-semibold text-white text-base truncate mb-2">${data.name.replace(/^Kategori\\s+/i, '')}</h3>
                 <div class="flex items-center gap-3">
-                    <div class="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all" style="width: ${progress}%"></div>
+                    <div class="progress flex-1">
+                        <div class="progress__bar" style="width: ${progress}%"></div>
                     </div>
-                    <span class="text-[8px] font-black text-slate-500 uppercase">${data.lastIndex}/${data.links.length} LINKS</span>
+                    <span class="text-sm text-slate-400 tabular-nums">${data.lastIndex}/${data.links.length} link</span>
                 </div>
             </div>
             <div class="ml-4 shrink-0 flex flex-col gap-2 items-stretch">
-                <button type="button" onclick="selectCat('${data.id}', this)" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-3.5 rounded-2xl text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">${isFinished ? 'Buka' : 'Lanjut'}</button>
-                <button type="button" onclick="resetProgress('${data.id}')" class="p-3 bg-slate-950 rounded-xl border border-slate-700 hover:bg-slate-800 text-[9px] font-black uppercase text-slate-500 hover:text-amber-400 transition-all" title="Reset progres">↺ Reset</button>
+                <button type="button" onclick="selectCat('${data.id}', this)"
+                    class="btn btn--primary btn--block">${isFinished ? 'Buka' : 'Lanjut'}</button>
+                <button type="button" onclick="resetProgress('${data.id}')"
+                    class="btn btn--ghost !min-h-0 !py-2" title="Reset progres">↻ Reset</button>
             </div>
         `;
         list.appendChild(card);

@@ -313,47 +313,65 @@ function render() {
     const container = document.getElementById('listDisplay');
     container.innerHTML = '';
     if (sitesData.length === 0) {
-        container.innerHTML =
-            '<p class="text-sm text-slate-500 italic p-8 text-center border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/40">Belum ada kategori. Isi form di atas.</p>';
+        container.innerHTML = `<div class="empty-state"><span class="empty-state__title">Belum ada antrean</span>Tambah antrean pertama di form di atas.</div>`;
         return;
     }
 
+    // Tabel antrean admin
+    const table = document.createElement('div');
+    table.className = 'overflow-x-auto';
+    table.innerHTML = `
+        <table class="table min-w-[600px]">
+            <thead>
+                <tr>
+                    <th class="w-12"></th>
+                    <th>Antrean</th>
+                    <th class="w-24">Status</th>
+                    <th class="w-20">Link</th>
+                    <th class="w-36">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="adminQueueBody"></tbody>
+        </table>
+    `;
+    container.appendChild(table);
+    const tbody = document.getElementById('adminQueueBody');
+    if (!tbody) return;
+
     sitesData.forEach((site, idx) => {
         const data = categories[site.id];
-        const htmlName = data.name.replace(/^Kategori\s+/i, '').trim();
-        const activeText = data.is_active ? 'ON' : 'OFF';
-        const activeClass = data.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400';
-        
-        const upBtn =
-            idx === 0
-                ? '<div class="w-8 h-8"></div>'
-                : `<button type="button" onclick="moveUp(${idx})" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg flex items-center justify-center text-xs font-black transition-colors">▲</button>`;
-        const downBtn =
-            idx === sitesData.length - 1
-                ? '<div class="w-8 h-8"></div>'
-                : `<button type="button" onclick="moveDown(${idx})" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg flex items-center justify-center text-xs font-black transition-colors">▼</button>`;
+        const htmlName = escapeHtml(data.name.replace(/^Kategori\\s+/i, '').trim());
+        const isActive = data.is_active !== 0;
+        const activeText = isActive ? 'Aktif' : 'Nonaktif';
+        const activeClass = isActive ? 'badge--success' : 'badge--neutral';
+        const linkCount = data.links.length;
 
-        const row = document.createElement('div');
-        row.className =
-            'bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex justify-between items-stretch gap-3 shadow-lg';
-        row.innerHTML = `
-            <div class="flex flex-col justify-center gap-1 py-1 pr-2 border-r border-slate-800 shrink-0">
-                ${upBtn}
-                ${downBtn}
-            </div>
-            <div class="flex-1 min-w-0 py-1">
-                <div class="flex items-center gap-2 mb-1">
-                    <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest">Kategori</p>
-                    <button onclick="toggleActive('${data.id}', ${!data.is_active})" class="px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${activeClass}">${activeText}</button>
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/50';
+        tr.innerHTML = `
+            <td>
+                <div class="flex flex-col gap-1 justify-center items-center">
+                    ${idx === 0 ? '<div class="w-8 h-8"></div>' : `<button type="button" onclick="moveUp(${idx})" class="btn btn--ghost !p-2 !w-8 !h-8" title="Naikkan">▲</button>`}
+                    ${idx === sitesData.length - 1 ? '<div class="w-8 h-8"></div>' : `<button type="button" onclick="moveDown(${idx})" class="btn btn--ghost !p-2 !w-8 !h-8" title="Turunkan">▼</button>`}
                 </div>
-                <h3 class="font-black text-sm ${data.is_active ? 'text-white' : 'text-slate-500'} truncate uppercase tracking-tight">${escapeHtml(htmlName)}</h3>
-                <p class="text-[10px] text-emerald-400/90 font-bold mt-1">${data.links.length} link</p>
-            </div>
-            <div class="flex flex-col justify-center gap-2 shrink-0">
-                <button type="button" onclick="editSite('${data.id}')" class="text-[9px] bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-3 py-2 rounded-xl font-black uppercase tracking-wider">Edit</button>
-                <button type="button" onclick="deleteSite('${data.id}')" class="text-[9px] text-red-400/90 hover:text-red-300 font-black uppercase px-1">Hapus</button>
-            </div>`;
-        container.appendChild(row);
+            </td>
+            <td class="font-medium text-white truncate max-w-[20rem]">${htmlName}</td>
+            <td><span class="badge ${activeClass}">${activeText}</span></td>
+            <td class="text-sm text-slate-400 tabular-nums">${linkCount} link</td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleActive('${data.id}', ${!isActive})"
+                        class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" aria-label="${isActive ? 'Nonaktifkan' : 'Aktifkan'}">
+                        ${isActive ? 'Nonaktif' : 'Aktifkan'}
+                    </button>
+                    <button type="button" onclick="editSite('${data.id}')"
+                        class="btn btn--primary !min-h-0 !py-1 !px-2 text-xs">Edit</button>
+                    <button type="button" onclick="deleteSite('${data.id}')"
+                        class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" aria-label="Hapus">Hapus</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
