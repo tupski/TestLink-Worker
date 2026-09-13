@@ -67,9 +67,20 @@ function showTab(tabId) {
         if (sidebar) HSOverlay.close(sidebar);
     }
     if (tabId === 'dash') loadStats();
+    if (tabId === 'links') { lmRefreshAll(); loadStats(); }
     if (tabId === 'settings') loadSettingsForm();
     if (tabId === 'history') loadServerHistoryTable();
+    if (tabId === 'system') loadSystemInfo();
     if (tabId === 'about') loadAboutForm();
+}
+
+function loadSystemInfo() {
+    const v = document.getElementById('sysVersion');
+    const s = document.getElementById('sysStorage');
+    const sw = document.getElementById('sysSw');
+    if (v) v.textContent = '1.0.0 (branch v2)';
+    if (s) s.textContent = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'SQLite lokal (data/database.sqlite)' : 'SQLite server (ephemeral di Vercel /tmp)';
+    if (sw) sw.textContent = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Aktif (mengontrol halaman ini)' : 'Tidak aktif di tab ini';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -140,6 +151,7 @@ async function loadStats() {
         if (elK) elK.textContent = d.siteCount ?? '0';
         if (elL) elL.textContent = d.linkCount ?? '0';
         if (elH) elH.textContent = d.historyCount ?? '0';
+        loadDashRecent();
     } catch (e) {
         if (String(e.message) === '403') {
             sessionStorage.removeItem('__admin_pass');
@@ -147,6 +159,42 @@ async function loadStats() {
         }
         if (elK) elK.textContent = '-';
     }
+}
+
+/** Aktivitas terbaru untuk panel Ringkas */
+async function loadDashRecent() {
+    const box = document.getElementById('dashRecentActivity');
+    if (!box) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/history`);
+        const d = await res.json();
+        const items = (d.history || []).slice(0, 5);
+        if (items.length === 0) {
+            box.innerHTML = '<p class="text-sm text-slate-500">Belum ada aktivitas.</p>';
+            return;
+        }
+        box.innerHTML = `<ul class="divide-y divide-slate-800">${items
+            .map((it) => {
+                const cls = it.action === 'ADD' ? 'badge--success' : it.action === 'EDIT' ? 'badge--neutral' : 'badge--danger';
+                return `<li class="flex items-center gap-3 py-2">
+                    <span class="badge ${cls} shrink-0">${escapeHtmlAdmin(it.action)}</span>
+                    <span class="text-sm text-slate-300 truncate flex-1">${escapeHtmlAdmin(it.site_name || '')}</span>
+                    <span class="text-xs text-slate-500 shrink-0">${formatWIBTimestamp(it.created_at)}</span>
+                </li>`;
+            })
+            .join('')}</ul>`;
+    } catch (e) {
+        box.innerHTML = '<p class="text-sm text-slate-500">Gagal memuat aktivitas.</p>';
+    }
+}
+
+function escapeHtmlAdmin(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 async function loadSettingsForm() {
@@ -304,6 +352,7 @@ async function loadSites() {
             };
         });
         render();
+        if (typeof lmRefreshAll === 'function') lmRefreshAll();
     } catch (err) {
         toastAdmin('Gagal muat data situs.');
     }

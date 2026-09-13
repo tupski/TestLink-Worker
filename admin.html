@@ -29,9 +29,11 @@
             </div>
             <nav class="flex flex-col gap-1" aria-label="Menu admin">
                 <button type="button" data-tab-btn="dash" class="admin-nav-item">Ringkas</button>
-                <button type="button" data-tab-btn="sites" class="admin-nav-item">Kategori</button>
+                <button type="button" data-tab-btn="links" class="admin-nav-item">Link Manager</button>
+                <button type="button" data-tab-btn="sites" class="admin-nav-item">Antrean</button>
                 <button type="button" data-tab-btn="settings" class="admin-nav-item">Pengaturan</button>
                 <button type="button" data-tab-btn="history" class="admin-nav-item">Riwayat</button>
+                <button type="button" data-tab-btn="system" class="admin-nav-item">Sistem</button>
                 <button type="button" data-tab-btn="about" class="admin-nav-item">Tentang</button>
             </nav>
             <a href="/" class="mt-auto text-sm text-slate-500 hover:text-white transition-colors">&larr; Kembali ke Worker</a>
@@ -78,23 +80,102 @@
                 <div class="card text-sm text-slate-400 leading-relaxed">
                     Ubah judul dan tagline di menu Pengaturan agar halaman worker konsisten dengan brand. Riwayat bisa dikosongkan lewat menu Riwayat.
                 </div>
+                <div class="card !p-0 overflow-hidden">
+                    <div class="flex items-center justify-between p-4 border-b border-slate-800">
+                        <h3 class="text-sm font-semibold text-white">Aktivitas terbaru</h3>
+                        <button type="button" class="btn btn--ghost !min-h-0 !py-1 !px-2 text-xs" onclick="loadStats()">Muat ulang</button>
+                    </div>
+                    <div id="dashRecentActivity" class="p-4">
+                        <p class="text-sm text-slate-500">Memuat…</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel: Link Manager -->
+            <div data-tab-panel="links" class="hidden space-y-4">
+                <div>
+                    <h2 class="page-title">Link Manager</h2>
+                    <p class="text-sm text-slate-400 mt-1">Cari, filter, tambah, ekspor, dan bersihkan duplikat di semua antrean.</p>
+                </div>
+
+                <div class="card space-y-4">
+                    <h3 class="text-sm font-semibold text-white">Tambah link</h3>
+                    <div>
+                        <label class="label" for="lmAddTarget">Antrean tujuan</label>
+                        <select id="lmAddTarget" class="input"></select>
+                    </div>
+                    <div>
+                        <label class="label" for="lmAddInput">Link, satu per baris</label>
+                        <textarea id="lmAddInput" rows="4" class="input font-mono text-xs leading-relaxed" placeholder="https://contoh.com&#10;lain.com"></textarea>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="lmSkipDup" checked class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm text-slate-300">Lewati URL yang sudah ada (anti-duplikat)</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="btn btn--primary" onclick="lmAddLinks()">Tambah ke antrean</button>
+                        <button type="button" class="btn btn--secondary" onclick="lmExportTxt()">Ekspor TXT</button>
+                        <button type="button" class="btn btn--ghost" onclick="lmRemoveDuplicates()">Bersihkan duplikat</button>
+                    </div>
+                    <p id="lmDupInfo" class="text-xs text-slate-500">Memeriksa duplikat…</p>
+                </div>
+
+                <div class="card !p-0 overflow-hidden">
+                    <div class="flex flex-wrap items-center gap-3 p-4 border-b border-slate-800">
+                        <div class="relative flex-1 min-w-[180px]">
+                            <input type="search" id="lmSearch" class="input pl-9" placeholder="Cari URL atau antrean…" aria-label="Cari link">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <select id="lmQueueFilter" class="input !w-auto text-sm" aria-label="Filter antrean"></select>
+                        <select id="lmPerPage" class="input !w-auto text-sm" aria-label="Baris per halaman">
+                            <option value="10">10 / halaman</option>
+                            <option value="25" selected>25 / halaman</option>
+                            <option value="50">50 / halaman</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table min-w-[720px]">
+                            <thead>
+                                <tr>
+                                    <th class="w-10"><input type="checkbox" id="lmSelectAll" class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500" aria-label="Pilih semua di halaman ini"></th>
+                                    <th>URL</th>
+                                    <th class="w-40">Antrean</th>
+                                    <th class="w-16">#</th>
+                                    <th class="w-32">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lmTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-slate-800">
+                        <p id="lmPageInfo" class="text-sm text-slate-400">Memuat…</p>
+                        <div class="flex items-center gap-2">
+                            <p id="lmSelectedCount" class="text-sm text-slate-400 mr-2">0 dipilih</p>
+                            <button type="button" class="btn btn--ghost !min-h-0 !py-1.5 !px-3 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" onclick="lmDeleteSelected()">Hapus terpilih</button>
+                            <button type="button" id="lmPrevBtn" class="btn btn--secondary !min-h-0 !py-1.5 !px-3 text-xs" onclick="lmSetPage(-1)">Sebelumnya</button>
+                            <button type="button" id="lmNextBtn" class="btn btn--secondary !min-h-0 !py-1.5 !px-3 text-xs" onclick="lmSetPage(1)">Berikutnya</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Panel: Kategori -->
             <div data-tab-panel="sites" class="hidden space-y-6">
                 <div>
-                    <h2 class="page-title">Kategori</h2>
+                    <h2 class="page-title">Antrean</h2>
                     <p class="text-sm text-slate-400 mt-1">Antrean link yang tampil di worker, sesuai urutan.</p>
                 </div>
                 <div id="adminFormContainer" class="card">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-sm font-semibold text-white">Tambah / edit kategori</h3>
+                        <h3 class="text-sm font-semibold text-white">Tambah / edit antrean</h3>
                         <button type="button" onclick="cancelEdit()" id="cancelEditBtn"
                             class="btn btn--ghost !min-h-0 !py-2 hidden">Batal</button>
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label class="label" for="siteNameInput">Nama kategori</label>
+                            <label class="label" for="siteNameInput">Nama antrean</label>
                             <input type="text" id="siteNameInput" placeholder="Contoh: Bundle ISP X" class="input">
                         </div>
                         <div>
@@ -163,6 +244,37 @@
                     <div class="pt-2">
                         <button type="button" onclick="saveSettings()" class="btn btn--primary btn--block">Simpan pengaturan</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Panel: Sistem -->
+            <div data-tab-panel="system" class="hidden space-y-4">
+                <div>
+                    <h2 class="page-title">Sistem</h2>
+                    <p class="text-sm text-slate-400 mt-1">Informasi runtime, PWA, dan pemeliharaan data.</p>
+                </div>
+
+                <div class="card space-y-3">
+                    <h3 class="text-sm font-semibold text-white">Runtime</h3>
+                    <dl class="text-sm divide-y divide-slate-800">
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Versi aplikasi</dt><dd id="sysVersion" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Zona waktu</dt><dd class="text-slate-200">WIB (UTC+7)</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Penyimpanan</dt><dd id="sysStorage" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-500">Service worker</dt><dd id="sysSw" class="text-slate-200">—</dd></div>
+                    </dl>
+                </div>
+
+                <div class="card space-y-3">
+                    <h3 class="text-sm font-semibold text-white">Pemeliharaan data</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Riwayat aktivitas dibatasi 50 entri terbaru di server. Worker menyaring tampilan ke 7 hari terakhir.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="btn btn--ghost border border-red-500/30 text-red-400 hover:!text-red-300" onclick="clearServerHistory()">Kosongkan riwayat server</button>
+                    </div>
+                </div>
+
+                <div class="card space-y-3">
+                    <h3 class="text-sm font-semibold text-white">Catatan penting</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Tujuan utama TestLink adalah membuka URL nyata di browser agar tercatat di <strong class="text-slate-200">history browser</strong>. Deteksi blokir/ping hanya diagnostik tambahan dan tidak menggantikan navigasi nyata.</p>
                 </div>
             </div>
 
@@ -238,6 +350,7 @@
 
     <!-- Preline UI (free): plugin interaktif via data-attribute -->
     <script src="https://cdn.jsdelivr.net/npm/preline@2/dist/preline.js"></script>
+    <script src="/js/admin-links.js"></script>
     <script src="/js/admin.js"></script>
     <script>document.getElementById('adminFooterYear').textContent = new Date().getFullYear();</script>
 </body>
