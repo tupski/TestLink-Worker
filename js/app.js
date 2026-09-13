@@ -157,8 +157,7 @@ async function clearHistoryBadgeSeen() {
 }
 
 function registerPWA() {
-    if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Registrasi service worker ditangani /js/pwa.js (termasuk banner update).
 }
 
 // Inisialisasi Aplikasi

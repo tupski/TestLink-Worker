@@ -23,11 +23,27 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 
 ## Stack
 
-- **Frontend**: Vanilla Javascript (ES6+), Tailwind CSS (Layouting), HTML5 Semantic.
-- **Styling**: Custom Vanilla CSS dengan arsitektur Glassmorphism & High-Contrast Dark Mode.
+- **Frontend**: Vanilla Javascript (ES6+), Tailwind CSS (build via CLI), HTML5 Semantic.
+- **Komponen UI**: [Preline UI](https://preline.co) (free) — plugin vanilla berbasis data-attribute.
+- **Styling**: Design system sendiri di `css/styles.css` (token warna/spasi/radius, komponen `.btn/.card/.input/.badge/.table`). Lihat `docs/DESIGN_SYSTEM.md`.
 - **Visualisasi**: [Chart.js](https://www.chartjs.org/) untuk grafik performa Speedtest.
 - **Backend/Database**: Node.js & SQLite (untuk efisiensi memori dan persistensi data).
 - **API**: Terintegrasi dengan `ipapi.co` (ISP) dan `ip-api.com` (DNS Resolver).
+
+> Catatan: Tailwind di-build ke `css/tailwind-built.css` (`npm run build:css`). Jalankan ulang setiap kali class Tailwind baru muncul di HTML/JS.
+
+---
+
+## Konfigurasi
+
+Salin `.env.example` menjadi `.env` lalu isi:
+
+| Variabel | Wajib | Keterangan |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | Ya (produksi) | Sandi panel admin. Jika kosong, endpoint admin balas 503. |
+| `ALLOWED_ORIGINS` | Tidak | Daftar origin CORS tambahan, dipisah koma. |
+
+Sandi dev `rahasia123` hanya berlaku di localhost saat `ADMIN_PASSWORD` kosong dan bukan environment produksi.
 
 ---
 
@@ -37,13 +53,18 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
    ```bash
    npm install
    ```
-2. **Menjalankan Server**:
+2. **Build CSS** (sekali, dan setiap ada class Tailwind baru):
+   ```bash
+   npm run build:css
+   ```
+3. **Menjalankan Server**:
    ```bash
    npm start
    ```
-3. **Akses**:
-   - Dashboard: `http://localhost:3000`
-   - Admin Panel: `http://localhost:3000/admin.html` (Password: `rahasia123`)
+4. **Akses**:
+   - Worker: `http://localhost:3000`
+   - Admin Panel: `http://localhost:3000/admin.html` (sandi: nilai `ADMIN_PASSWORD`, atau `rahasia123` saat dev lokal)
+   - Tentang: `http://localhost:3000/about.html`
 
 ---
 

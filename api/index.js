@@ -7,7 +7,29 @@ const fs = require('fs');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors());
+
+/**
+ * CORS: aplikasi ini same-origin (Express juga menyajikan halaman statis).
+ * Origin tambahan hanya dari ALLOWED_ORIGINS (dipisah koma).
+ */
+const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+app.use(
+    cors({
+        origin(origin, cb) {
+            if (!origin) return cb(null, true); // same-origin / non-browser
+            if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+            try {
+                const host = new URL(origin).host;
+                if (host === ALLOWED_ORIGINS[0]) return cb(null, true);
+            } catch (e) {}
+            return cb(null, false);
+        }
+    })
+);
 app.use(express.json({ limit: '10mb' }));
 
 /** Root proyek: di Vercel, includeFiles membawa file ke /var/task. */
@@ -256,11 +278,62 @@ function uuidv4() {
     });
 }
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rahasia123';
+/**
+ * Keamanan admin:
+ * - ADMIN_PASSWORD wajib di produksi (tanpa fallback hardcoded).
+ * - Di dev tanpa env, hanya localhost yang boleh memakai sandi dev.
+ * - Rate limit sederhana per IP untuk mencegah brute force.
+ */
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' || process.env.VERCEL ? '' : 'rahasia123');
+const IS_DEV_FALLBACK = !process.env.ADMIN_PASSWORD && process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_ATTEMPTS = 20;
+const authAttempts = new Map();
+
+function authRateLimited(ip) {
+    const now = Date.now();
+    const entry = authAttempts.get(ip);
+    if (!entry || now - entry.start > AUTH_WINDOW_MS) {
+        authAttempts.set(ip, { start: now, count: 1 });
+        return false;
+    }
+    entry.count += 1;
+    return entry.count > AUTH_MAX_ATTEMPTS;
+}
+
 const requireAdmin = (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    if (authRateLimited(ip)) {
+        return res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' });
+    }
+    if (!ADMIN_PASSWORD) {
+        return res.status(503).json({ error: 'ADMIN_PASSWORD belum diatur di server.' });
+    }
     const reqPass = req.headers['x-admin-password'] || '';
     if (reqPass !== ADMIN_PASSWORD) {
         return res.status(403).json({ error: 'Password Admin Salah atau Akses Ditolak.' });
+    }
+    next();
+};
+
+if (!process.env.ADMIN_PASSWORD) {
+    console.warn(
+        IS_DEV_FALLBACK
+            ? '⚠ ADMIN_PASSWORD belum diatur — memakai sandi dev hanya untuk localhost.'
+            : '⚠ ADMIN_PASSWORD belum diatur — endpoint admin dinonaktifkan (503).'
+    );
+}
+
+function isLocalRequest(req) {
+    const host = String(req.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+/** Tolak sandi dev bila permintaan datang dari host non-lokal. */
+const requireLocalDevOnly = (req, res, next) => {
+    if (IS_DEV_FALLBACK && !isLocalRequest(req)) {
+        return res.status(503).json({ error: 'ADMIN_PASSWORD belum diatur di server.' });
     }
     next();
 };
@@ -277,7 +350,7 @@ const SETTINGS_KEYS = new Set([
     'gsb_api_key'
 ]);
 
-app.post('/api/auth', requireAdmin, (req, res) => {
+app.post('/api/auth', requireLocalDevOnly, requireAdmin, (req, res) => {
     res.json({ success: true });
 });
 
@@ -285,7 +358,8 @@ app.get('/api/settings', (req, res) => {
     db.all(`SELECT key, value FROM kv_settings`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const settings = {};
-        const isAdmin = req.headers['x-admin-password'] === ADMIN_PASSWORD || req.headers['x-admin-password'] === process.env.ADMIN_PASSWORD;
+        const reqPass = req.headers['x-admin-password'] || '';
+        const isAdmin = Boolean(ADMIN_PASSWORD) && reqPass === ADMIN_PASSWORD;
         rows.forEach((r) => {
             if (r.key === 'gsb_api_key' && !isAdmin) return;
             settings[r.key] = r.value;
@@ -329,7 +403,7 @@ async function checkWithGSB(url) {
     }
 }
 
-app.put('/api/settings', requireAdmin, (req, res) => {
+app.put('/api/settings', requireLocalDevOnly, requireAdmin, (req, res) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const entries = Object.entries(body).filter(([k]) => SETTINGS_KEYS.has(k));
     if (entries.length === 0) {
@@ -359,7 +433,7 @@ app.put('/api/settings', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
+app.get('/api/admin/stats', requireLocalDevOnly, requireAdmin, (req, res) => {
     db.all(`SELECT links FROM sites`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         let linkCount = 0;
@@ -418,7 +492,7 @@ app.post('/api/check-block', async (req, res) => {
     }
 });
 
-app.delete('/api/history', requireAdmin, (req, res) => {
+app.delete('/api/history', requireLocalDevOnly, requireAdmin, (req, res) => {
     db.run(`DELETE FROM history`, [], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true, deleted: this.changes });
@@ -461,7 +535,7 @@ app.get('/api/history', (req, res) => {
     });
 });
 
-app.post('/api/sites', requireAdmin, (req, res) => {
+app.post('/api/sites', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { name, links } = req.body;
     const id = uuidv4();
     const now = getNowWIB();
@@ -485,7 +559,7 @@ app.post('/api/sites', requireAdmin, (req, res) => {
     });
 });
 
-app.put('/api/sites/order', requireAdmin, (req, res) => {
+app.put('/api/sites/order', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { orders } = req.body;
     if (!Array.isArray(orders)) return res.status(400).json({ error: 'Invalid data' });
 
@@ -499,7 +573,7 @@ app.put('/api/sites/order', requireAdmin, (req, res) => {
     res.json({ success: true });
 });
 
-app.put('/api/sites/:id/toggle', requireAdmin, (req, res) => {
+app.put('/api/sites/:id/toggle', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { is_active } = req.body;
     db.run(`UPDATE sites SET is_active = ? WHERE id = ?`, [is_active ? 1 : 0, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -507,7 +581,7 @@ app.put('/api/sites/:id/toggle', requireAdmin, (req, res) => {
     });
 });
 
-app.put('/api/sites/:id', requireAdmin, (req, res) => {
+app.put('/api/sites/:id', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { name, links } = req.body;
     const now = getNowWIB();
 
@@ -544,7 +618,7 @@ app.put('/api/sites/:id', requireAdmin, (req, res) => {
     });
 });
 
-app.delete('/api/sites/:id', requireAdmin, (req, res) => {
+app.delete('/api/sites/:id', requireLocalDevOnly, requireAdmin, (req, res) => {
     db.get(`SELECT name, links FROM sites WHERE id = ?`, [req.params.id], (err, row) => {
         if (err || !row) return res.status(500).json({ error: 'Situs tidak ditemukan' });
 
@@ -591,10 +665,15 @@ app.post('/api/progress', (req, res) => {
 app.get(['/admin', '/admin/'], (req, res) => res.redirect(302, '/admin.html'));
 app.get(['/about', '/about/'], (req, res) => res.redirect(302, '/about.html'));
 app.get('/favicon.ico', (req, res) => {
-    const icon = path.join(ROOT, 'icons', 'icon.svg');
-    if (fs.existsSync(icon)) {
-        res.type('image/svg+xml');
-        return res.sendFile(icon);
+    const candidates = [
+        path.join(ROOT, 'icons', 'icon-192.png'),
+        path.join(ROOT, 'icons', 'icon.svg')
+    ];
+    for (const icon of candidates) {
+        if (fs.existsSync(icon)) {
+            res.type(icon.endsWith('.svg') ? 'image/svg+xml' : 'image/png');
+            return res.sendFile(icon);
+        }
     }
     res.status(204).end();
 });

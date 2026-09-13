@@ -1,6 +1,6 @@
 /* Minimal SW — cache shell app; bump CACHE untuk invalidate */
-const CACHE = 'testlink-v7';
-const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/manifest.webmanifest', '/icons/icon.svg'];
+const CACHE = 'testlink-v9';
+const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/js/pwa.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
     e.waitUntil(
@@ -13,6 +13,19 @@ self.addEventListener('activate', (e) => {
         caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())
     );
 });
+
+self.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+/** Beri tahu semua tab saat SW versi baru mengambil alih. */
+function notifyClients(message) {
+    self.clients.matchAll({ type: 'window' }).then((list) => {
+        list.forEach((client) => client.postMessage(message));
+    });
+}
+
+self.addEventListener('activate', () => notifyClients({ type: 'APP_UPDATED' }));
 
 self.addEventListener('fetch', (e) => {
     const u = new URL(e.request.url);

@@ -8,6 +8,7 @@
         "includeFiles": [
           "*.html",
           "*.md",
+          "*.png",
           "css/**",
           "js/**",
           "icons/**",
