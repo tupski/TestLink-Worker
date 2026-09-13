@@ -283,6 +283,29 @@ select.input {
     box-shadow: inset 3px 0 0 var(--primary);
 }
 
+/* Tab bagian pengaturan (Preline data-hs-tab) */
+.settings-tab {
+    flex-shrink: 0;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color var(--dur) ease, border-color var(--dur) ease;
+}
+
+.settings-tab:hover {
+    color: var(--text);
+}
+
+.settings-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--primary);
+}
+
 .page-title {
     font-size: 1.375rem;
     font-weight: 700;

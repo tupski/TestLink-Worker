@@ -204,10 +204,27 @@
             <div data-tab-panel="settings" class="hidden space-y-4">
                 <div>
                     <h2 class="page-title">Pengaturan</h2>
-                    <p class="text-sm text-slate-400 mt-1">Branding worker, runner, maintenance, dan Safe Browsing.</p>
+                    <p class="text-sm text-slate-400 mt-1">Branding worker, runner, pemeliharaan, dan keamanan pemindaian.</p>
                 </div>
-                <div class="card space-y-4">
-                    <h3 class="text-sm font-semibold text-white">Branding halaman worker</h3>
+
+                <!-- Navigasi bagian -->
+                <div class="flex gap-1 overflow-x-auto no-scrollbar border-b border-slate-800" role="tablist" aria-label="Bagian pengaturan">
+                    <button type="button" role="tab" id="set-tabnav-umum" aria-controls="set-tab-umum" aria-selected="true"
+                        class="settings-tab" data-hs-tab="#set-tab-umum">Umum</button>
+                    <button type="button" role="tab" id="set-tabnav-runner" aria-controls="set-tab-runner" aria-selected="false"
+                        class="settings-tab" data-hs-tab="#set-tab-runner">Runner</button>
+                    <button type="button" role="tab" id="set-tabnav-maintenance" aria-controls="set-tab-maintenance" aria-selected="false"
+                        class="settings-tab" data-hs-tab="#set-tab-maintenance">Pemeliharaan</button>
+                    <button type="button" role="tab" id="set-tabnav-security" aria-controls="set-tab-security" aria-selected="false"
+                        class="settings-tab" data-hs-tab="#set-tab-security">Keamanan</button>
+                </div>
+
+                <!-- Bagian: Umum -->
+                <div id="set-tab-umum" role="tabpanel" aria-labelledby="set-tabnav-umum" class="card space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Branding worker</h3>
+                        <p class="text-xs text-slate-500 mt-1">Tampil di header halaman worker dan judul tab browser.</p>
+                    </div>
                     <div>
                         <label class="label" for="setAppTitle">Judul aplikasi</label>
                         <input type="text" id="setAppTitle" class="input" maxlength="120">
@@ -216,34 +233,58 @@
                         <label class="label" for="setAppTagline">Tagline</label>
                         <input type="text" id="setAppTagline" class="input" maxlength="200">
                     </div>
+                </div>
+
+                <!-- Bagian: Runner -->
+                <div id="set-tab-runner" role="tabpanel" aria-labelledby="set-tabnav-runner" class="hidden card space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Perilaku runner</h3>
+                        <p class="text-xs text-slate-500 mt-1">Nilai awal yang dipakai worker saat dibuka. Pengguna masih bisa mengubahnya di layar runner.</p>
+                    </div>
                     <div>
                         <label class="label" for="setDefaultInterval">Jeda runner default (detik)</label>
                         <input type="number" id="setDefaultInterval" min="1" max="120" value="3" class="input max-w-[8rem]">
+                        <p class="text-xs text-slate-500 mt-1">Rentang 1–120 detik. Server membulatkan nilai tidak valid ke 3.</p>
                     </div>
-                    <label class="flex items-center gap-3 py-2 cursor-pointer">
-                        <input type="checkbox" id="setMaintenanceMode" class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-950">
-                        <span class="text-sm text-slate-300">Mode maintenance <span class="text-slate-500">(banner di worker)</span></span>
+                </div>
+
+                <!-- Bagian: Pemeliharaan -->
+                <div id="set-tab-maintenance" role="tabpanel" aria-labelledby="set-tabnav-maintenance" class="hidden card space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Mode pemeliharaan</h3>
+                        <p class="text-xs text-slate-500 mt-1">Menampilkan banner di worker. Runner tetap berfungsi.</p>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="setMaintenanceMode" class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm text-slate-300">Aktifkan banner pemeliharaan</span>
                     </label>
                     <div>
-                        <label class="label" for="setMaintenanceMsg">Pesan maintenance</label>
+                        <label class="label" for="setMaintenanceMsg">Pesan pemeliharaan</label>
                         <textarea id="setMaintenanceMsg" rows="2" maxlength="500" class="input"></textarea>
+                        <p class="text-xs text-slate-500 mt-1">Kosongkan untuk memakai pesan bawaan.</p>
                     </div>
+                </div>
 
-                    <hr class="border-slate-800 my-2" />
-                    <h3 class="text-sm font-semibold text-white">Google Safe Browsing</h3>
-                    <p class="text-xs text-slate-500">Pemeriksaan dilakukan di sisi server.</p>
-                    <label class="flex items-center gap-3 py-2 cursor-pointer">
-                        <input type="checkbox" id="setGsbActive" class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-950">
+                <!-- Bagian: Keamanan -->
+                <div id="set-tab-security" role="tabpanel" aria-labelledby="set-tabnav-security" class="hidden card space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Google Safe Browsing</h3>
+                        <p class="text-xs text-slate-500 mt-1">Pemeriksaan ancaman dilakukan di sisi server saat link diuji. Kegagalan API tidak menghentikan runner.</p>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="setGsbActive" class="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500">
                         <span class="text-sm text-slate-300">Aktifkan deteksi Google Safe Browsing</span>
                     </label>
                     <div>
                         <label class="label" for="setGsbApiKey">API Key</label>
-                        <input type="password" id="setGsbApiKey" class="input font-mono" placeholder="AIzaSy...">
+                        <input type="password" id="setGsbApiKey" class="input font-mono" placeholder="AIzaSy..." autocomplete="off">
+                        <p class="text-xs text-slate-500 mt-1">Disimpan di server dan tidak pernah dikirim ke worker tanpa autentikasi admin.</p>
                     </div>
+                </div>
 
-                    <div class="pt-2">
-                        <button type="button" onclick="saveSettings()" class="btn btn--primary btn--block">Simpan pengaturan</button>
-                    </div>
+                <div class="card !p-4 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-xs text-slate-500">Pengaturan jaringan, PWA, dan notifikasi belum punya opsi tersimpan di server. Yang bisa diatur ada di panel Sistem.</p>
+                    <button type="button" onclick="saveSettings()" class="btn btn--primary">Simpan pengaturan</button>
                 </div>
             </div>
 

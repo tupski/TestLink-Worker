@@ -88,6 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => showTab(btn.getAttribute('data-tab-btn')));
     });
 
+    // Sinkronkan aria-selected pada tab bagian pengaturan (visibilitas diatur Preline)
+    document.querySelectorAll('[data-hs-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('[data-hs-tab]').forEach((t) => {
+                t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+            });
+        });
+    });
+
     if (!sessionPass) {
         document.getElementById('pwdModal').classList.remove('hidden');
         setTimeout(() => document.getElementById('pwdInput').focus(), 50);

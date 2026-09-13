@@ -1,5 +1,5 @@
 /* Minimal SW — cache shell app; bump CACHE untuk invalidate */
-const CACHE = 'testlink-v6';
+const CACHE = 'testlink-v7';
 const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/manifest.webmanifest', '/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
