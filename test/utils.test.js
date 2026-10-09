@@ -1,5 +1,5 @@
 /**
- * Unit test js/utils.js — jalankan via `npm test` (node:test, tanpa dependensi baru).
+ * Unit test js/utils.js, jalankan via `npm test` (node:test, tanpa dependensi baru).
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');

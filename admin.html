@@ -70,15 +70,15 @@
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div class="card text-center">
-                        <p id="statSites" class="text-2xl font-bold text-white">—</p>
+                        <p id="statSites" class="text-2xl font-bold text-white">-</p>
                         <p class="text-xs text-slate-400 mt-1">Kategori</p>
                     </div>
                     <div class="card text-center">
-                        <p id="statLinks" class="text-2xl font-bold text-indigo-400">—</p>
+                        <p id="statLinks" class="text-2xl font-bold text-indigo-400">-</p>
                         <p class="text-xs text-slate-400 mt-1">Total link</p>
                     </div>
                     <div class="card text-center">
-                        <p id="statHistory" class="text-2xl font-bold text-slate-200">—</p>
+                        <p id="statHistory" class="text-2xl font-bold text-slate-200">-</p>
                         <p class="text-xs text-slate-400 mt-1">Riwayat</p>
                     </div>
                 </div>
@@ -303,10 +303,10 @@
                 <div class="card space-y-3">
                     <h3 class="text-sm font-semibold text-white">Runtime</h3>
                     <dl class="text-sm divide-y divide-slate-800">
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Versi aplikasi</dt><dd id="sysVersion" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Versi aplikasi</dt><dd id="sysVersion" class="text-slate-200">-</dd></div>
                         <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Zona waktu</dt><dd class="text-slate-200">WIB (UTC+7)</dd></div>
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Penyimpanan</dt><dd id="sysStorage" class="text-slate-200">—</dd></div>
-                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Service worker</dt><dd id="sysSw" class="text-slate-200">—</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Penyimpanan</dt><dd id="sysStorage" class="text-slate-200">-</dd></div>
+                        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-400">Service worker</dt><dd id="sysSw" class="text-slate-200">-</dd></div>
                     </dl>
                 </div>
 
@@ -348,22 +348,36 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h2 class="page-title">Riwayat server</h2>
-                        <p class="text-sm text-slate-400 mt-1">50 entri terakhir (baca saja).</p>
+                        <p class="text-sm text-slate-400 mt-1">50 entri terakhir (baca saja), tampil per halaman.</p>
                     </div>
                     <button type="button" onclick="clearServerHistory()" class="btn btn--ghost !text-red-400 hover:!text-red-300 border border-red-500/30">Kosongkan riwayat</button>
                 </div>
-                <div class="card !p-0 overflow-x-auto">
-                    <table class="table min-w-[28rem]">
-                        <thead>
-                            <tr>
-                                <th>Aksi</th>
-                                <th>Situs</th>
-                                <th>Ringkas</th>
-                                <th>Waktu</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody"></tbody>
-                    </table>
+                <div class="card !p-0">
+                    <div class="overflow-x-auto">
+                        <table class="table min-w-[28rem]">
+                            <thead>
+                                <tr>
+                                    <th>Aksi</th>
+                                    <th>Situs</th>
+                                    <th>Ringkas</th>
+                                    <th>Waktu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-slate-800">
+                        <p id="histPageInfo" class="text-sm text-slate-400">Memuat…</p>
+                        <div class="flex items-center gap-2">
+                            <select id="histPerPage" class="input !w-auto text-sm" aria-label="Baris per halaman" onchange="histSetPerPage(this.value)">
+                                <option value="5">5 / halaman</option>
+                                <option value="10" selected>10 / halaman</option>
+                                <option value="25">25 / halaman</option>
+                            </select>
+                            <button type="button" id="histPrevBtn" class="btn btn--secondary !py-1.5 !px-3 text-xs" onclick="histSetPage(-1)">Sebelumnya</button>
+                            <button type="button" id="histNextBtn" class="btn btn--secondary !py-1.5 !px-3 text-xs" onclick="histSetPage(1)">Berikutnya</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

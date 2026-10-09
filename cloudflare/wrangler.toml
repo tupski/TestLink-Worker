@@ -1,4 +1,4 @@
-# Cloudflare Worker — passthrough ke Vercel (atau origin Node lain)
+# Cloudflare Worker: passthrough ke Vercel (atau origin Node lain)
 # Deploy: cd cloudflare && npx wrangler deploy
 #
 # Wajib set secret (jangan commit URL ke git):

@@ -285,11 +285,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-center">
                         <p class="text-[8px] text-slate-400 font-black uppercase mb-1">Tipe koneksi</p>
-                        <p id="connNetType" class="text-[10px] font-bold text-slate-200">—</p>
+                        <p id="connNetType" class="text-[10px] font-bold text-slate-200">-</p>
                     </div>
                     <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-center">
                         <p class="text-[8px] text-slate-400 font-black uppercase mb-1">Network API</p>
-                        <p id="connNetEff" class="text-[10px] font-mono text-indigo-300">—</p>
+                        <p id="connNetEff" class="text-[10px] font-mono text-indigo-300">-</p>
                     </div>
                 </div>
                 <!-- DNS -->
@@ -337,25 +337,26 @@
         <div
             class="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] w-full max-w-md shadow-2xl relative overflow-hidden">
             <div class="text-center mb-6">
-                <h2 class="text-xl font-black text-white italic uppercase tracking-tighter">Pengetesan Kecepatan</h2>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Simulasi Data 50 MB</p>
+                <h2 class="text-xl font-black text-white italic uppercase tracking-tighter">Simulasi Kecepatan</h2>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Angka acak untuk ilustrasi, bukan ukuran jaringan</p>
             </div>
 
             <div
                 class="mb-6 h-[180px] w-full bg-slate-950 rounded-3xl p-4 border border-slate-800 shadow-inner relative">
                 <canvas id="speedChart"></canvas>
+                <span class="badge badge--neutral absolute top-3 right-3 pointer-events-none">Simulasi</span>
             </div>
 
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800/50 text-center">
                     <p class="text-[8px] text-slate-400 font-black uppercase mb-1">Sekarang</p>
                     <p id="speedValue" class="text-2xl font-black text-white italic">0.0</p>
-                    <p class="text-[8px] text-indigo-400 font-black">Mbps</p>
+                    <p class="text-[8px] text-indigo-400 font-black">Mbps (simulasi)</p>
                 </div>
                 <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800/50 text-center">
                     <p class="text-[8px] text-slate-400 font-black uppercase mb-1">Rata-rata</p>
                     <p id="speedAvg" class="text-2xl font-black text-indigo-500 italic">0.0</p>
-                    <p class="text-[8px] text-indigo-400 font-black">Mbps</p>
+                    <p class="text-[8px] text-indigo-400 font-black">Mbps (simulasi)</p>
                 </div>
             </div>
 

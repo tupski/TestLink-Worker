@@ -9,7 +9,7 @@ let deviceId = localStorage.getItem('__linkflow_uuid') || (() => {
     return id;
 })();
 
-// Escape HTML (escapeHtml/escapeAttr/isSafeHttpUrl) dimuat dari js/utils.js — konsolidasi A-02.
+// Escape HTML (escapeHtml/escapeAttr/isSafeHttpUrl) dimuat dari js/utils.js (konsolidasi A-02).
 
 // Status Global
 let sitesData = [];
@@ -160,7 +160,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     initInterceptors();
     initModeToggles();
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeToolsSheet();
+        if (e.key !== 'Escape') return;
+        closeToolsSheet();
+        const speedModal = document.getElementById('speedModal');
+        if (speedModal && !speedModal.classList.contains('hidden')) closeSpeedModal();
     });
     // Delegasi aksi kartu antrean (menggantikan onclick berisi data server)
     document.addEventListener('click', (e) => {
@@ -427,7 +430,7 @@ function initModeToggles() {
     mt.addEventListener('change', (e) => {
         modeAuto = e.target.checked;
         document.getElementById('modeDesc').innerText = modeAuto
-            ? "Jeda antrean di tab ini — lanjut tanpa harus kembali fokus"
+            ? "Jeda antrean di tab ini, lanjut tanpa harus kembali fokus"
             : "Buka link di tab baru, lalu kembali ke tab ini untuk lanjut";
         mvc.classList.toggle('opacity-30', modeAuto);
         mvt.disabled = modeAuto;
@@ -494,7 +497,7 @@ async function executeOpenLink() {
         if (!blocked) {
             try { window.open(fullUrl, '_blank'); } catch (e) {}
         } else {
-            const msg = isGsbThreat ? 'Bahaya Malicious Terdeteksi Google Safe Browsing — dilewati.' : 'Link redirect ke halaman blokir Kominfo — dilewati.';
+            const msg = isGsbThreat ? 'Bahaya Malicious Terdeteksi Google Safe Browsing, dilewati.' : 'Link redirect ke halaman blokir Kominfo, dilewati.';
             showToast(msg);
             appendBlockedLinkToReport(fullUrl);
         }
@@ -712,7 +715,7 @@ function fillNetworkConnectionFields() {
     if (!typeEl || !effEl) return;
     if (!nc) {
         typeEl.innerText = 'Tidak tersedia';
-        effEl.innerText = '—';
+        effEl.innerText = '-';
         return;
     }
     const rawType = (nc.type || 'unknown').toString();
@@ -725,7 +728,7 @@ function fillNetworkConnectionFields() {
     if (t === 'wifi') label = 'Wi‑Fi';
     if (t === 'ethernet') label = 'Ethernet';
     typeEl.innerText = label;
-    effEl.innerText = nc.effectiveType ? String(nc.effectiveType).toUpperCase() : '—';
+    effEl.innerText = nc.effectiveType ? String(nc.effectiveType).toUpperCase() : '-';
 }
 
 // LOGIKA VERIFIKASI KONEKSI

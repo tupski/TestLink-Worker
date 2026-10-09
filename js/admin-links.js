@@ -1,10 +1,11 @@
 /**
- * Link Manager — cari, filter, pilih, bulk action, impor TXT, duplikat.
+ * Link Manager: cari, filter, pilih, bulk action, impor TXT, duplikat.
  * Memakai API existing: GET/POST/PUT/DELETE /api/sites.
  */
 const LM_STATE = {
     page: 1,
     perPage: 25,
+    loadState: 'idle', // idle | loading | ready | error
     search: '',
     queueId: '',
     selected: new Set(),
@@ -63,6 +64,29 @@ function lmRender() {
     const info = document.getElementById('lmPageInfo');
     const selCount = document.getElementById('lmSelectedCount');
     if (!body) return;
+
+    if (LM_STATE.loadState === 'loading') {
+        body.innerHTML =
+            '<tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400" aria-busy="true">Memuat data link…</td></tr>';
+        if (info) info.textContent = 'Memuat…';
+        if (selCount) selCount.textContent = '0 dipilih';
+        const p = document.getElementById('lmPrevBtn');
+        const n = document.getElementById('lmNextBtn');
+        if (p) p.disabled = true;
+        if (n) n.disabled = true;
+        return;
+    }
+    if (LM_STATE.loadState === 'error') {
+        body.innerHTML =
+            '<tr><td colspan="5" class="px-4 py-8 text-center text-sm text-red-400">Gagal memuat data link. <button type="button" class="btn btn--secondary !py-1.5 !px-3 text-xs ml-2" data-lm-retry>Coba lagi</button></td></tr>';
+        if (info) info.textContent = 'Gagal memuat';
+        if (selCount) selCount.textContent = '0 dipilih';
+        const p = document.getElementById('lmPrevBtn');
+        const n = document.getElementById('lmNextBtn');
+        if (p) p.disabled = true;
+        if (n) n.disabled = true;
+        return;
+    }
 
     if (total === 0) {
         body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">${
@@ -183,6 +207,7 @@ function lmBind() {
             if (e.target.classList.contains('lm-row-check')) lmOnRowCheck(e.target);
         });
         body.addEventListener('click', (e) => {
+            if (e.target.closest('[data-lm-retry]')) return loadSites();
             const copyBtn = e.target.closest('[data-lm-copy]');
             if (copyBtn) lmCopy(copyBtn.getAttribute('data-lm-copy'));
         });
@@ -355,8 +380,16 @@ function lmFillAddTarget() {
 
 /** Dipanggil setelah loadSites() agar tabel & filter link manager ikut segar. */
 function lmRefreshAll() {
+    LM_STATE.loadState = 'ready';
     lmFillQueueFilter();
     lmFillAddTarget();
+    lmBind();
+    lmRender();
+}
+
+/** Status muat panel Link Manager, dipanggil loadSites() saat fetch gagal/berjalan. */
+function lmSetState(state) {
+    LM_STATE.loadState = state;
     lmBind();
     lmRender();
 }

@@ -24,7 +24,7 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 ## Stack
 
 - **Frontend**: Vanilla Javascript (ES6+), Tailwind CSS (build via CLI), HTML5 Semantic.
-- **Komponen UI**: [Preline UI](https://preline.co) (free) — plugin vanilla berbasis data-attribute.
+- **Komponen UI**: [Preline UI](https://preline.co) (free), plugin vanilla berbasis data-attribute.
 - **Styling**: Design system sendiri di `css/styles.css` (token warna/spasi/radius, komponen `.btn/.card/.input/.badge/.table`). Lihat `docs/DESIGN_SYSTEM.md`.
 - **Visualisasi**: [Chart.js](https://www.chartjs.org/) untuk grafik performa Speedtest.
 - **Backend/Database**: Node.js & SQLite (untuk efisiensi memori dan persistensi data).

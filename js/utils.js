@@ -1,5 +1,5 @@
 /**
- * Utils bersama TestLink — satu sumber escape HTML/atribut + validasi skema URL.
+ * Utils bersama TestLink: satu sumber escape HTML/atribut + validasi skema URL.
  *
  * Dimuat sebagai classic script di ketiga halaman SEBELUM app.js/admin.js/admin-links.js.
  * Ekspor UMD-lite (`module.exports` bila tersedia) agar bisa diuji via `node:test`.

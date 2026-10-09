@@ -1,5 +1,5 @@
 /**
- * Panel admin — dashboard, kategori, pengaturan situs, riwayat server
+ * Panel admin: dashboard, kategori, pengaturan situs, riwayat server
  */
 let sitesData = [];
 let categories = {};
@@ -61,10 +61,17 @@ function showTab(tabId) {
     document.querySelectorAll('[data-tab-panel]').forEach((panel) => {
         panel.classList.toggle('hidden', panel.getAttribute('data-tab-panel') !== tabId);
     });
-    // Tutup drawer di mobile setelah memilih menu
+    // Tutup drawer di mobile setelah memilih menu.
+    // Jangan sampai kegagalan Preline (belum siap saat boot) membatalkan pemuatan data tab.
     if (window.innerWidth < 1024 && typeof HSOverlay !== 'undefined') {
         const sidebar = document.getElementById('adminSidebar');
-        if (sidebar) HSOverlay.close(sidebar);
+        if (sidebar) {
+            try {
+                HSOverlay.close(sidebar);
+            } catch (e) {
+                /* Preline belum ter-init saat boot; abaikan agar data tab tetap dimuat. */
+            }
+        }
     }
     if (tabId === 'dash') loadStats();
     if (tabId === 'links') { lmRefreshAll(); loadStats(); }
@@ -285,21 +292,35 @@ async function saveSettings() {
     }
 }
 
-async function loadServerHistoryTable() {
+const HISTORY_STATE = { page: 1, perPage: 10, rows: [] };
+
+function histSetPage(delta) {
+    HISTORY_STATE.page += delta;
+    renderHistoryTable();
+}
+
+function histSetPerPage(value) {
+    const n = parseInt(value, 10);
+    HISTORY_STATE.perPage = n === 5 || n === 10 || n === 25 ? n : 10;
+    HISTORY_STATE.page = 1;
+    renderHistoryTable();
+}
+
+function renderHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">Memuat…</td></tr>';
-    try {
-        const res = await fetch(`${API_BASE}/api/history`);
-        const data = await res.json();
-        const rows = data.history || [];
-        if (rows.length === 0) {
-            tbody.innerHTML =
-                '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 text-xs italic">Riwayat kosong.</td></tr>';
-            return;
-        }
+    const rows = HISTORY_STATE.rows;
+    const pages = Math.max(1, Math.ceil(rows.length / HISTORY_STATE.perPage));
+    HISTORY_STATE.page = Math.min(Math.max(1, HISTORY_STATE.page), pages);
+    const start = (HISTORY_STATE.page - 1) * HISTORY_STATE.perPage;
+    const pageRows = rows.slice(start, start + HISTORY_STATE.perPage);
+
+    if (rows.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 text-xs">Riwayat kosong.</td></tr>';
+    } else {
         tbody.innerHTML = '';
-        rows.slice(0, 40).forEach((item) => {
+        pageRows.forEach((item) => {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-slate-800/80 hover:bg-slate-900/50';
             const when = formatWIBTimestamp(item.created_at);
@@ -310,9 +331,43 @@ async function loadServerHistoryTable() {
                 <td class="px-4 py-3 text-[9px] text-slate-400 whitespace-nowrap">${when}</td>`;
             tbody.appendChild(tr);
         });
+    }
+
+    const info = document.getElementById('histPageInfo');
+    if (info) {
+        info.textContent =
+            rows.length === 0
+                ? 'Tidak ada riwayat'
+                : `Menampilkan ${start + 1}-${Math.min(start + HISTORY_STATE.perPage, rows.length)} dari ${rows.length}${rows.length >= 50 ? ' terbaru' : ''}`;
+    }
+    const prev = document.getElementById('histPrevBtn');
+    const next = document.getElementById('histNextBtn');
+    if (prev) prev.disabled = rows.length === 0 || HISTORY_STATE.page <= 1;
+    if (next) next.disabled = rows.length === 0 || HISTORY_STATE.page >= pages;
+}
+
+async function loadServerHistoryTable() {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    tbody.innerHTML =
+        '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs" aria-busy="true">Memuat…</td></tr>';
+    const info = document.getElementById('histPageInfo');
+    if (info) info.textContent = 'Memuat…';
+    const prev = document.getElementById('histPrevBtn');
+    const next = document.getElementById('histNextBtn');
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+    try {
+        const res = await fetch(`${API_BASE}/api/history`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        HISTORY_STATE.rows = data.history || [];
+        HISTORY_STATE.page = 1;
+        renderHistoryTable();
     } catch (e) {
         tbody.innerHTML =
-            '<tr><td colspan="4" class="px-4 py-6 text-center text-red-400 text-xs">Gagal memuat.</td></tr>';
+            '<tr><td colspan="4" class="px-4 py-6 text-center text-red-400 text-xs">Gagal memuat riwayat. <button type="button" class="btn btn--secondary !py-1.5 !px-3 text-xs ml-2" onclick="loadServerHistoryTable()">Coba lagi</button></td></tr>';
+        if (info) info.textContent = 'Gagal memuat';
     }
 }
 
@@ -346,24 +401,50 @@ function cancelEdit() {
         'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] transition-colors shadow-lg active:scale-95 shadow-indigo-900/40';
 }
 
+let sitesState = 'idle'; // idle | loading | ready | error
+
 async function loadSites() {
+    const container = document.getElementById('listDisplay');
+    const hadContent = sitesState === 'ready';
+    sitesState = 'loading';
+    if (!hadContent) {
+        if (typeof lmSetState === 'function') lmSetState('loading');
+        if (container) {
+            container.innerHTML =
+                '<div class="empty-state" aria-busy="true"><span class="empty-state__title">Memuat antrean…</span>Mengambil data situs dari server.</div>';
+        }
+    }
     try {
         const res = await fetch(`${API_BASE}/api/sites`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         categories = {};
-        sitesData = data.sites;
+        sitesData = data.sites || [];
         sitesData.forEach((site) => {
             categories[site.id] = {
                 id: site.id,
                 name: site.name,
                 is_active: site.is_active !== 0,
-                links: site.links.split(/\r?\n/).map((l) => l.trim()).filter((l) => l)
+                links: String(site.links || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l)
             };
         });
+        sitesState = 'ready';
         render();
         if (typeof lmRefreshAll === 'function') lmRefreshAll();
     } catch (err) {
-        toastAdmin('Gagal muat data situs.');
+        if (hadContent) {
+            // Konten lama masih terpakai; cukup beri tahu kegagalan refresh.
+            sitesState = 'ready';
+            toastAdmin('Gagal memperbarui data situs.');
+        } else {
+            sitesState = 'error';
+            if (typeof lmSetState === 'function') lmSetState('error');
+            if (container) {
+                container.innerHTML =
+                    '<div class="empty-state"><span class="empty-state__title">Gagal memuat antrean</span>Server tidak menjawab. Periksa koneksi lalu coba lagi.' +
+                    '<button type="button" class="btn btn--secondary !py-2 !px-4 text-xs mt-3" onclick="loadSites()">Coba lagi</button></div>';
+            }
+        }
     }
 }
 

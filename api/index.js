@@ -320,8 +320,8 @@ const requireAdmin = (req, res, next) => {
 if (!process.env.ADMIN_PASSWORD) {
     console.warn(
         IS_DEV_FALLBACK
-            ? '⚠ ADMIN_PASSWORD belum diatur — memakai sandi dev hanya untuk localhost.'
-            : '⚠ ADMIN_PASSWORD belum diatur — endpoint admin dinonaktifkan (503).'
+            ? '⚠ ADMIN_PASSWORD belum diatur: memakai sandi dev hanya untuk localhost.'
+            : '⚠ ADMIN_PASSWORD belum diatur: endpoint admin dinonaktifkan (503).'
     );
 }
 
