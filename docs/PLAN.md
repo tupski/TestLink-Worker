@@ -1,7 +1,7 @@
 # PLAN — UI/UX Overhaul TestLink (branch `v2`)
 
-Spesifikasi: `docs/Hermes Master Prompt — TestLink UI/UX Overhaul.md`.
-Library: Preline UI free (`docs/UI_LIBRARY_DECISION.md`). Desain: `docs/DESIGN_SYSTEM.md`. Audit: `docs/UI_UX_AUDIT.md`.
+Spesifikasi: `docs/Hermes Master Prompt — TestLink UI/UX Overhaul.md`. Produk: `docs/PRD.md`.
+Library: Preline UI free (`docs/UI_LIBRARY_DECISION.md`). Desain: `docs/DESIGN_SYSTEM.md`. Audit: `docs/UI_UX_AUDIT.md`, `docs/ARCHITECTURE_AUDIT.md`, `docs/SECURITY_AUDIT.md`.
 
 ## Fasa
 
@@ -17,9 +17,37 @@ Library: Preline UI free (`docs/UI_LIBRARY_DECISION.md`). Desain: `docs/DESIGN_S
 - [x] **Fasa 9 — Security & Cleanup** (2026-09-13): fallback sandi hardcoded dihapus untuk produksi — `ADMIN_PASSWORD` wajib, jika kosong endpoint admin balas 503 dan sandi dev hanya berlaku untuk request non-produksi non-Vercel dari host lokal (`requireLocalDevOnly`); rate limit auth per IP (20 percobaan / 15 menit → 429); bug laten `isAdmin` di `GET /api/settings` (undefined === undefined) diperbaiki agar `gsb_api_key` tidak pernah bocor saat password kosong; CORS dibatasi ke same-origin + `ALLOWED_ORIGINS` (sebelumnya `cors()` terbuka); `.env.example` ditambahkan. Verifikasi: prod tanpa password → 503 untuk auth/PUT/POST, GET publik tetap 200, `gsb_api_key` tidak terekspos, 429 muncul setelah percobaan berulang, ACAO tidak dikirim untuk origin asing.
 - [x] **Fasa 10 — QA** (2026-09-13): skrip `scripts/qa-static.js` (cek ID JS↔HTML, handler onclick, kontras WCAG 16 pasangan); perbaikan hasil QA — kontras `text-slate-500/600` (3,75:1 / ±2,3:1, gagal AA) dinaikkan ke `text-slate-400` di 58 tempat + token `--text-faint` → `#94a3b8`; tap target `!min-h-0` dihapus di 12 tombol ikon agar kembali ≥44px; laporan lengkap di `docs/QA_REPORT.md` termasuk daftar uji manual yang butuh browser nyata (runner, history browser nyata, PWA install, responsif).
 
+## Program Audit & Remediasi (Fase A-I, 2026-10-09)
+
+Lanjutan overhaul dengan fokus Admin Panel + audit arsitektur/keamanan menyeluruh + remediasi + test regresi + dokumentasi. Temuan: `docs/ARCHITECTURE_AUDIT.md` (A-01..A-14), `docs/SECURITY_AUDIT.md` (S-01..S-12).
+
+**Guardrail:** tanpa framework/bundler/dependensi runtime baru; tanpa migrasi DB; `window.open` satu-satunya navigasi nyata; kontrak API existing (validasi hanya aditif); perilaku PWA + URL publik dipertahankan; tanpa hapus DB/file user; commit logis per fase hanya setelah acceptance pass; tanpa push sebelum approval akhir; rollback = `git checkout` (baseline HEAD 646c587).
+
+- [x] **Fase A — Baseline & Audit** (tanpa perubahan kode): A1 baseline (build:css deterministik, node --check 7/7, qa-static PASS, curl smoke); A2 ARCHITECTURE_AUDIT.md; A3 refresh UI_UX_AUDIT.md; A4 SECURITY_AUDIT.md; A5 PRD.md + PLAN.md; A6 presentasi hasil + menunggu approval sebelum Fase B.
+  - Acceptance: temuan ber-bukti file:line; tanpa klaim tanpa verifikasi; kode aplikasi tidak berubah.
+- [x] **Fase B — Refactor terkontrol** (2026-10-09): B1 selesai — `js/utils.js` (escapeHtml diperbaiki + escapeAttr + isSafeHttpUrl, UMD-lite) dimuat paling awal di 3 halaman; 4 definisi escape lama dihapus (app.js, admin.js ×2, admin-links.js); sink admin-links.js → `escapeAttr`/`escapeHtml`; sw.js v11 + precache `utils.js`; qa-static menyertakan utils; `npm test` aktif (5 unit test escape/URL) + `npm run qa`. A-01 selesai (styles.css di admin.html). B2 dievaluasi → **ditunda** (35 onclick inline + ±18 state global; ditinjau ulang setelah C/D/E + harness H — lihat ARCHITECTURE_AUDIT A-03).
+  - Acceptance (terverifikasi): qa-static PASS; helper dimuat sebelum semua pemakai (urutan DOM + runtime); test escape 5/5 lulus; smoke HTTP 12/12; click-through Playwright worker+admin (login dev, antrean 17 baris, Link Manager 25 baris/1024 link, riwayat 40 baris, 0 console error).
+- [ ] **Fase C — Escaping diterapkan**: semua sink terverifikasi (app.js:225, 260-280, 631-638, 915-919, 1101; admin.js:306, 421-428); data server tidak lagi masuk `onclick` string (data-attribute + delegasi); validasi skema href (http/https) di admin-links.js.
+  - Acceptance: test karakter HTML/kutip di semua sink; tidak ada handler inline baru berisi data dinamis.
+- [ ] **Fase D — Dialog konfirmasi custom** (satu komponen aksesibel: role=alertdialog, aria-modal, focus trap, Escape menutup, tap 44px): ganti 5 `confirm()` + 1 `alert()` dengan semantik identik.
+  - Acceptance: batal/Escape/focus-loss = no-op; alur konfirmasi sama; keyboard-only OK.
+- [ ] **Fase E — Polish Admin & Worker**: Antrean loading state; Link Manager error state; Riwayat pagination 5/10/25 (fetch tetap 50); label "Simulasi" speedtest diperkuat; rerun build:css; Delivery Gate antislop per fase UI.
+  - Acceptance: state loading/error/empty konsisten; gate antislop PASS dengan bukti; build deterministik.
+- [ ] **Fase F — Remediasi keamanan (aditif)**: validasi POST/PUT /api/sites, /api/sites/order, /api/progress (400 JSON, tidak pernah 500); interval max (mis. 3600); hardening check-block (DNS + pin alamat + blokir IP privat/loopback/link-local + redirect manual maks 3 hop + timeout); deny `data/` + `*.sqlite` sebelum express.static; CORS dead check; compare timing-safe; rate limit hitung gagal saja.
+  - Acceptance: tiap fix punya test regresi + entri retest di SECURITY_AUDIT.md; input valid lama tidak berubah perilakunya.
+- [ ] **Fase G — Cleanup & PWA**: hapus `@supabase/supabase-js`; sw.js precache `icons/icon-maskable-512.png` + bump v12 (v11 sudah dipakai di Fase B1); verifikasi PWA lokal (manifest, SW register, banner update, offline shell via Playwright); dokumentasikan yang tak terverifikasi.
+  - Acceptance: server tetap start setelah uninstall; PWA lokal terverifikasi sejauh lingkungan memungkinkan.
+- [ ] **Fase H — Test & QA**: harness `node:test` tanpa dependensi baru (API auth/validasi/deny; unit escape/href/IP privat); perluas qa-static (confirm/alert count, tanda innerHTML tak ter-escape); checklist regresi seluruh fitur → `QA_REPORT.md`; gate penuh + click-through Playwright dengan bukti.
+  - Acceptance: `npm test` hijau; qa exit code benar saat gagal; tanpa klaim PASS tanpa eksekusi.
+- [ ] **Fase I — Dokumentasi & laporan**: finalisasi SECURITY_AUDIT/QA_REPORT/CHANGELOG/UI_UX_AUDIT/ARCHITECTURE_AUDIT/PLAN/PRD; laporan Delivery Gate antislop; laporan akhir 9 bagian; commit per fase; push origin/v2 hanya setelah semua gate lulus + approval.
+
+**Risiko utama:** regresi runner saat refactor (mitigasi: satu fokus per fase, test, click-through); hardening check-block mengubah perilaku untuk URL internal (dokumentasi + test); bump SW berisiko cache lama (verifikasi banner update + versi); perubahan rate limit bisa memengaruhi admin aktif (verifikasi perilaku lama dulu).
+
+**Batas verifikasi:** otomatis (node --test, qa-static, build, curl) vs Playwright lokal (alur UI, dialog, responsif, console) vs perangkat nyata (install PWA, standalone, offline riil, ISP/DNS seluler) yang didokumentasikan sebagai tidak terverifikasi dari lingkungan ini.
+
 ## Git
 
-Commit logis per fasa (docs:/feat:/fix:/chore:). Branch `v2`.
+Commit logis per fasa (docs:/feat:/fix:/chore:). Branch `v2`. Program A-I: commit per fase setelah acceptance pass; push `origin/v2` hanya setelah semua gate lulus dan approval eksplisit.
 
 ## Catatan antislop (mode DURING)
 

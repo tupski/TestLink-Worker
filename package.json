@@ -7,7 +7,8 @@
   "start": "node api/index.js",
   "build:css": "tailwindcss -i ./css/tailwind.css -o ./css/tailwind-built.css --minify",
   "deploy:cf": "cd cloudflare && npx wrangler deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test",
+    "qa": "node scripts/qa-static.js"
   },
   "keywords": [],
   "author": "",

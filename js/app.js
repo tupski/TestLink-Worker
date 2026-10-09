@@ -9,16 +9,7 @@ let deviceId = localStorage.getItem('__linkflow_uuid') || (() => {
     return id;
 })();
 
-// Escape HTML untuk mencegah XSS (R-38, best practice)
-function escapeHtml(s) {
-    if (!s) return '';
-    return String(s)
-        .replaceAll('&', '&')
-        .replaceAll('<', '<')
-        .replaceAll('>', '>')
-        .replaceAll('"', '"')
-        .replaceAll("'", '&#039;');
-}
+// Escape HTML (escapeHtml/escapeAttr/isSafeHttpUrl) dimuat dari js/utils.js — konsolidasi A-02.
 
 // Status Global
 let sitesData = [];

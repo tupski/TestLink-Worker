@@ -10,7 +10,7 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 const pages = ['index.html', 'admin.html', 'about.html'];
-const scripts = ['js/app.js', 'js/admin.js', 'js/admin-links.js', 'js/pwa.js'];
+const scripts = ['js/utils.js', 'js/app.js', 'js/admin.js', 'js/admin-links.js', 'js/pwa.js'];
 
 const htmlAll = pages.map(read).join('\n');
 const jsAll = scripts.map(read).join('\n');

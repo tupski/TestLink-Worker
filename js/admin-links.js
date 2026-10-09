@@ -75,16 +75,16 @@ function lmRender() {
                 const checked = LM_STATE.selected.has(r.url + '|' + r.siteId) ? 'checked' : '';
                 return `<tr class="hover:bg-slate-900/50">
                     <td><input type="checkbox" class="lm-row-check w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
-                        data-key="${lmEsc(r.url + '|' + r.siteId)}" ${checked} aria-label="Pilih link"></td>
-                    <td class="text-xs font-mono text-slate-300 break-all">${lmEsc(r.url)}${
+                        data-key="${escapeAttr(r.url + '|' + r.siteId)}" ${checked} aria-label="Pilih link"></td>
+                    <td class="text-xs font-mono text-slate-300 break-all">${escapeHtml(r.url)}${
                         isDup ? ' <span class="badge badge--warning ml-1">duplikat</span>' : ''
                     }</td>
-                    <td class="text-sm text-slate-400">${lmEsc(r.siteName)}</td>
+                    <td class="text-sm text-slate-400">${escapeHtml(r.siteName)}</td>
                     <td class="text-xs text-slate-400 tabular-nums">${r.index + 1}</td>
                     <td>
                         <div class="flex items-center gap-1">
-                            <button type="button" class="btn btn--ghost !py-1 !px-2 text-xs" data-lm-copy="${lmEsc(r.url)}">Salin</button>
-                            <a class="btn btn--ghost !py-1 !px-2 text-xs" href="${lmEsc(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>
+                            <button type="button" class="btn btn--ghost !py-1 !px-2 text-xs" data-lm-copy="${escapeAttr(r.url)}">Salin</button>
+                            <a class="btn btn--ghost !py-1 !px-2 text-xs" href="${escapeAttr(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>
                         </div>
                     </td>
                 </tr>`;
@@ -105,15 +105,6 @@ function lmRender() {
         const n = dupKeys.size;
         dupInfo.textContent = n > 0 ? `${n} URL duplikat terdeteksi (ditandai di tabel).` : 'Tidak ada URL duplikat.';
     }
-}
-
-function lmEsc(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }
 
 function lmToggleAll(checked) {
@@ -236,7 +227,7 @@ function lmFillQueueFilter() {
     const current = sel.value;
     sel.innerHTML =
         '<option value="">Semua antrean</option>' +
-        sitesData.map((s) => `<option value="${lmEsc(s.id)}">${lmEsc(categories[s.id] ? categories[s.id].name : s.id)}</option>`).join('');
+        sitesData.map((s) => `<option value="${escapeAttr(s.id)}">${escapeHtml(categories[s.id] ? categories[s.id].name : s.id)}</option>`).join('');
     sel.value = current;
 }
 
@@ -347,7 +338,7 @@ function lmFillAddTarget() {
     if (!sel) return;
     const current = sel.value;
     sel.innerHTML = sitesData
-        .map((s) => `<option value="${lmEsc(s.id)}">${lmEsc(categories[s.id] ? categories[s.id].name : s.id)}</option>`)
+        .map((s) => `<option value="${escapeAttr(s.id)}">${escapeHtml(categories[s.id] ? categories[s.id].name : s.id)}</option>`)
         .join('');
     if (current) sel.value = current;
 }

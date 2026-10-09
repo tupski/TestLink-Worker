@@ -186,8 +186,8 @@ async function loadDashRecent() {
             .map((it) => {
                 const cls = it.action === 'ADD' ? 'badge--success' : it.action === 'EDIT' ? 'badge--neutral' : 'badge--danger';
                 return `<li class="flex items-center gap-3 py-2">
-                    <span class="badge ${cls} shrink-0">${escapeHtmlAdmin(it.action)}</span>
-                    <span class="text-sm text-slate-300 truncate flex-1">${escapeHtmlAdmin(it.site_name || '')}</span>
+                    <span class="badge ${cls} shrink-0">${escapeHtml(it.action)}</span>
+                    <span class="text-sm text-slate-300 truncate flex-1">${escapeHtml(it.site_name || '')}</span>
                     <span class="text-xs text-slate-400 shrink-0">${formatWIBTimestamp(it.created_at)}</span>
                 </li>`;
             })
@@ -195,15 +195,6 @@ async function loadDashRecent() {
     } catch (e) {
         box.innerHTML = '<p class="text-sm text-slate-400">Gagal memuat aktivitas.</p>';
     }
-}
-
-function escapeHtmlAdmin(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }
 
 async function loadSettingsForm() {
@@ -313,12 +304,6 @@ async function loadServerHistoryTable() {
         tbody.innerHTML =
             '<tr><td colspan="4" class="px-4 py-6 text-center text-red-400 text-xs">Gagal memuat.</td></tr>';
     }
-}
-
-function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
 }
 
 async function clearServerHistory() {
