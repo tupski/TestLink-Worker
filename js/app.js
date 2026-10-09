@@ -1104,7 +1104,12 @@ function closeDiff() { document.getElementById('diffModal').classList.add('hidde
 
 async function resetProgress(siteId) {
     if (isRunning || pingInProgress) return showToast('Stop runner atau ping dulu sebelum reset.');
-    if (!confirm('Reset ulang progres pengetesan situs ini?')) return;
+    const ok = await showConfirmDialog({
+        title: 'Reset progres',
+        message: 'Reset ulang progres pengetesan situs ini?',
+        confirmText: 'Reset'
+    });
+    if (!ok) return;
     categories[siteId].lastIndex = 0;
     categories[siteId].normal = 0;
     categories[siteId].error = 0;

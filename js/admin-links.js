@@ -129,7 +129,12 @@ function lmOnRowCheck(el) {
 async function lmDeleteSelected() {
     const keys = [...LM_STATE.selected];
     if (keys.length === 0) return toastAdmin('Belum ada link yang dipilih.');
-    if (!confirm(`Hapus ${keys.length} link dari antreannya? Tindakan ini langsung tersimpan ke server.`)) return;
+    const ok = await showConfirmDialog({
+        title: 'Hapus link terpilih',
+        message: `Hapus ${keys.length} link dari antreannya? Tindakan ini langsung tersimpan ke server.`,
+        confirmText: 'Hapus'
+    });
+    if (!ok) return;
 
     const bySite = new Map();
     keys.forEach((k) => {
@@ -143,15 +148,15 @@ async function lmDeleteSelected() {
         const data = categories[siteId];
         if (!data) continue;
         const kept = data.links.filter((u) => !urls.has(u));
-        changed += data.links.length - kept.length;
         try {
             const res = await fetch(`${API_BASE}/api/sites/${siteId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify({ name: data.name, links: kept })
+                body: JSON.stringify({ name: data.name, links: kept.join('\n') })
             });
             const d = await res.json();
             if (d.error) throw new Error(d.error);
+            changed += data.links.length - kept.length;
         } catch (e) {
             toastAdmin('Gagal menghapus link di ' + data.name + ': ' + e.message);
         }
@@ -269,7 +274,7 @@ async function lmAddLinks() {
         const res = await fetch(`${API_BASE}/api/sites/${siteId}`, {
             method: 'PUT',
             headers: getHeaders(),
-            body: JSON.stringify({ name: data.name, links: data.links.concat(toAdd) })
+            body: JSON.stringify({ name: data.name, links: data.links.concat(toAdd).join('\n') })
         });
         const d = await res.json();
         if (d.error) throw new Error(d.error);
@@ -285,7 +290,12 @@ async function lmAddLinks() {
 async function lmRemoveDuplicates() {
     const groups = lmDuplicateGroups();
     if (groups.length === 0) return toastAdmin('Tidak ada duplikat untuk dibersihkan.');
-    if (!confirm(`Bersihkan ${groups.length} kelompok URL duplikat? Kemunculan pertama dipertahankan.`)) return;
+    const ok = await showConfirmDialog({
+        title: 'Bersihkan duplikat',
+        message: `Bersihkan ${groups.length} kelompok URL duplikat? Kemunculan pertama dipertahankan.`,
+        confirmText: 'Bersihkan'
+    });
+    if (!ok) return;
 
     const bySite = new Map();
     groups.forEach(([, arr]) => {
@@ -300,15 +310,15 @@ async function lmRemoveDuplicates() {
         const data = categories[siteId];
         if (!data) continue;
         const kept = data.links.filter((u) => !urls.has(u));
-        removed += data.links.length - kept.length;
         try {
             const res = await fetch(`${API_BASE}/api/sites/${siteId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify({ name: data.name, links: kept })
+                body: JSON.stringify({ name: data.name, links: kept.join('\n') })
             });
             const d = await res.json();
             if (d.error) throw new Error(d.error);
+            removed += data.links.length - kept.length;
         } catch (e) {
             toastAdmin('Gagal membersihkan duplikat di ' + data.name + ': ' + e.message);
         }

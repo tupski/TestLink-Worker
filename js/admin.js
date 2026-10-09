@@ -146,7 +146,7 @@ function rejectPwd() {
 
 function toastAdmin(msg) {
     const t = document.getElementById('adminToast');
-    if (!t) return alert(msg);
+    if (!t) return showAlertDialog({ title: 'Pemberitahuan', message: msg });
     t.textContent = msg;
     t.classList.remove('hidden', 'opacity-0', 'translate-y-2');
     clearTimeout(toastAdmin._tm);
@@ -317,7 +317,12 @@ async function loadServerHistoryTable() {
 }
 
 async function clearServerHistory() {
-    if (!confirm('Yakin hapus SEMUA riwayat server? Ini nggak bisa di-undo, bestie.')) return;
+    const ok = await showConfirmDialog({
+        title: 'Kosongkan riwayat',
+        message: 'Yakin hapus SEMUA riwayat server? Ini nggak bisa di-undo, bestie.',
+        confirmText: 'Hapus semua'
+    });
+    if (!ok) return;
     try {
         const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers: getHeaders() });
         const d = await res.json();
@@ -601,7 +606,12 @@ function editSite(siteId) {
 
 async function deleteSite(siteId) {
     if (editingSiteId) return toastAdmin('Batalkan mode edit dulu.');
-    if (!confirm('Hapus kategori ini permanen? Progress device ikut kehapus.')) return;
+    const ok = await showConfirmDialog({
+        title: 'Hapus kategori',
+        message: 'Hapus kategori ini permanen? Progress device ikut kehapus.',
+        confirmText: 'Hapus'
+    });
+    if (!ok) return;
     try {
         const res = await fetch(`${API_BASE}/api/sites/${siteId}`, { method: 'DELETE', headers: getHeaders() });
         const d = await res.json();

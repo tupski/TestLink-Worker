@@ -438,7 +438,7 @@ app.get('/api/admin/stats', requireLocalDevOnly, requireAdmin, (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         let linkCount = 0;
         rows.forEach((row) => {
-            linkCount += row.links.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).length;
+            linkCount += String(row.links || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).length;
         });
         db.get(`SELECT COUNT(*) AS c FROM history`, [], (e2, hrow) => {
             if (e2) return res.status(500).json({ error: e2.message });
@@ -537,6 +537,9 @@ app.get('/api/history', (req, res) => {
 
 app.post('/api/sites', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { name, links } = req.body;
+    if (typeof name !== 'string' || typeof links !== 'string') {
+        return res.status(400).json({ error: 'Invalid data' });
+    }
     const id = uuidv4();
     const now = getNowWIB();
 
@@ -583,12 +586,15 @@ app.put('/api/sites/:id/toggle', requireLocalDevOnly, requireAdmin, (req, res) =
 
 app.put('/api/sites/:id', requireLocalDevOnly, requireAdmin, (req, res) => {
     const { name, links } = req.body;
+    if (typeof name !== 'string' || typeof links !== 'string') {
+        return res.status(400).json({ error: 'Invalid data' });
+    }
     const now = getNowWIB();
 
     db.get(`SELECT * FROM sites WHERE id = ?`, [req.params.id], (err, row) => {
         if (err || !row) return res.status(500).json({ error: err ? err.message : 'Tidak ditemukan' });
 
-        const oldLinks = row.links.split('\n').map((l) => l.trim()).filter((l) => l);
+        const oldLinks = String(row.links || '').split('\n').map((l) => l.trim()).filter((l) => l);
         const newLinks = links.split('\n').map((l) => l.trim()).filter((l) => l);
 
         const added = newLinks.filter((l) => !oldLinks.includes(l)).length;
