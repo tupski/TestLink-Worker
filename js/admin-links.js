@@ -84,7 +84,7 @@ function lmRender() {
                     <td>
                         <div class="flex items-center gap-1">
                             <button type="button" class="btn btn--ghost !py-1 !px-2 text-xs" data-lm-copy="${escapeAttr(r.url)}">Salin</button>
-                            <a class="btn btn--ghost !py-1 !px-2 text-xs" href="${escapeAttr(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>
+                            ${isSafeHttpUrl(r.url) ? `<a class="btn btn--ghost !py-1 !px-2 text-xs" href="${escapeAttr(r.url)}" target="_blank" rel="noopener noreferrer">Buka</a>` : '<span class="btn btn--ghost !py-1 !px-2 text-xs opacity-40 cursor-not-allowed" title="URL tidak valid">Buka</span>'}
                         </div>
                     </td>
                 </tr>`;

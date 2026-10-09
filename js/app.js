@@ -162,6 +162,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeToolsSheet();
     });
+    // Delegasi aksi kartu antrean (menggantikan onclick berisi data server)
+    document.addEventListener('click', (e) => {
+        const sel = e.target.closest('[data-cat-select]');
+        if (sel) return selectCat(sel.getAttribute('data-cat-select'), sel);
+        const rst = e.target.closest('[data-cat-reset]');
+        if (rst) return resetProgress(rst.getAttribute('data-cat-reset'));
+    });
 
     checkConnectionInfo();
     registerPWA();
@@ -213,7 +220,7 @@ async function loadSites() {
         refreshHistoryBadgeMeta();
     } catch (err) {
         console.error(err);
-        document.getElementById('listDisplay').innerHTML = `<p class="text-xs text-red-500 font-black p-6 text-center italic uppercase">Error: ${err.message}</p>`;
+        document.getElementById('listDisplay').innerHTML = `<p class="text-xs text-red-500 font-black p-6 text-center italic uppercase">Error: ${escapeHtml(err.message)}</p>`;
     }
 }
 
@@ -254,7 +261,7 @@ function renderSiteList() {
                     <span class="label !mb-0">Antrean</span>
                     ${isFinished ? '<span class="badge badge--success">Selesai</span>' : ''}
                 </div>
-                <h3 class="font-semibold text-white text-base truncate mb-2">${data.name.replace(/^Kategori\\s+/i, '')}</h3>
+                <h3 class="font-semibold text-white text-base truncate mb-2">${escapeHtml(data.name.replace(/^Kategori\s+/i, ''))}</h3>
                 <div class="flex items-center gap-3">
                     <div class="progress flex-1">
                         <div class="progress__bar" style="width: ${progress}%"></div>
@@ -263,9 +270,9 @@ function renderSiteList() {
                 </div>
             </div>
             <div class="ml-4 shrink-0 flex flex-col gap-2 items-stretch">
-                <button type="button" onclick="selectCat('${data.id}', this)"
+                <button type="button" data-cat-select="${escapeAttr(data.id)}"
                     class="btn btn--primary btn--block">${isFinished ? 'Buka' : 'Lanjut'}</button>
-                <button type="button" onclick="resetProgress('${data.id}')"
+                <button type="button" data-cat-reset="${escapeAttr(data.id)}"
                     class="btn btn--ghost !py-2" title="Reset progres">↻ Reset</button>
             </div>
         `;
@@ -619,13 +626,14 @@ function appendBlockedLinkToReport(url) {
     
     const div = document.createElement('div');
     div.className = "flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2";
+    const canOpen = isSafeHttpUrl(url);
     div.innerHTML = `
-        <span class="text-[10px] items-center text-slate-300 font-mono truncate flex-1">${url}</span>
-        <a href="${url}" target="_blank" rel="noopener noreferrer" class="shrink-0 p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors border border-indigo-500/20" title="Buka manual">
+        <span class="text-[10px] items-center text-slate-300 font-mono truncate flex-1">${escapeHtml(url)}</span>
+        ${canOpen ? `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" class="shrink-0 p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors border border-indigo-500/20" title="Buka manual">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
             </svg>
-        </a>
+        </a>` : ''}
     `;
     list.appendChild(div);
 }
@@ -903,11 +911,11 @@ async function startPingTestDetailed() {
         
         const line = document.createElement('div');
         if (res.ok) {
-            line.innerHTML = `<span class="text-emerald-400">✓ ${cleanUrl} OK ${res.ms}ms</span>`;
+            line.innerHTML = `<span class="text-emerald-400">✓ ${escapeHtml(cleanUrl)} OK ${res.ms}ms</span>`;
         } else {
             const tag =
                 res.reason === 'blocked' ? 'BLOKIR' : res.reason === 'unreachable' ? 'TAK TERJANGKAU' : 'FAIL';
-            line.innerHTML = `<span class="text-red-500">✖ ${cleanUrl} ${tag}</span>`;
+            line.innerHTML = `<span class="text-red-500">✖ ${escapeHtml(cleanUrl)} ${tag}</span>`;
             
             if (res.reason === 'blocked') appendBlockedLinkToReport(url.startsWith('h') ? url : 'https://' + url);
 
@@ -1089,7 +1097,7 @@ function showDiffDetails(globalIdx, type) {
     const links = p[type] || [];
     document.getElementById('diffModal').classList.remove('hidden');
     document.getElementById('diffModalTitle').innerText = type === 'added' ? 'LINK DITAMBAHKAN' : 'LINK DIHAPUS';
-    document.getElementById('diffModalContent').innerHTML = links.map(l => `<div>• ${l}</div>`).join("") || "Kosong.";
+    document.getElementById('diffModalContent').innerHTML = links.map(l => `<div>• ${escapeHtml(l)}</div>`).join("") || "Kosong.";
 }
 
 function closeDiff() { document.getElementById('diffModal').classList.add('hidden'); }

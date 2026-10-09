@@ -97,6 +97,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Delegasi aksi tabel antrean (menggantikan onclick berisi data server)
+    document.addEventListener('click', (e) => {
+        const tg = e.target.closest('[data-site-toggle]');
+        if (tg) return toggleActive(tg.getAttribute('data-site-toggle'), tg.getAttribute('data-site-active') !== '1');
+        const ed = e.target.closest('[data-site-edit]');
+        if (ed) return editSite(ed.getAttribute('data-site-edit'));
+        const dl = e.target.closest('[data-site-delete]');
+        if (dl) return deleteSite(dl.getAttribute('data-site-delete'));
+    });
+
     if (!sessionPass) {
         document.getElementById('pwdModal').classList.remove('hidden');
         setTimeout(() => document.getElementById('pwdInput').focus(), 50);
@@ -294,7 +304,7 @@ async function loadServerHistoryTable() {
             tr.className = 'border-b border-slate-800/80 hover:bg-slate-900/50';
             const when = formatWIBTimestamp(item.created_at);
             tr.innerHTML = `
-                <td class="px-4 py-3 text-[10px] font-black uppercase text-indigo-400">${item.action}</td>
+                <td class="px-4 py-3 text-[10px] font-black uppercase text-indigo-400">${escapeHtml(item.action)}</td>
                 <td class="px-4 py-3 text-xs font-bold text-white truncate max-w-[8rem]">${escapeHtml(item.site_name)}</td>
                 <td class="px-4 py-3 text-[10px] text-slate-400">${escapeHtml(item.diff_summary || '')}</td>
                 <td class="px-4 py-3 text-[9px] text-slate-400 whitespace-nowrap">${when}</td>`;
@@ -383,8 +393,8 @@ function render() {
 
     sitesData.forEach((site, idx) => {
         const data = categories[site.id];
-        const htmlName = escapeHtml(data.name.replace(/^Kategori\\s+/i, '').trim());
-        const isActive = data.is_active !== 0;
+        const htmlName = escapeHtml(data.name.replace(/^Kategori\s+/i, '').trim());
+        const isActive = Boolean(data.is_active);
         const activeText = isActive ? 'Aktif' : 'Nonaktif';
         const activeClass = isActive ? 'badge--success' : 'badge--neutral';
         const linkCount = data.links.length;
@@ -403,13 +413,13 @@ function render() {
             <td class="text-sm text-slate-400 tabular-nums">${linkCount} link</td>
             <td>
                 <div class="flex items-center gap-2">
-                    <button type="button" onclick="toggleActive('${data.id}', ${!isActive})"
+                    <button type="button" data-site-toggle="${escapeAttr(data.id)}" data-site-active="${isActive ? '1' : '0'}"
                         class="btn btn--ghost !py-1 !px-2 text-xs" aria-label="${isActive ? 'Nonaktifkan' : 'Aktifkan'}">
                         ${isActive ? 'Nonaktif' : 'Aktifkan'}
                     </button>
-                    <button type="button" onclick="editSite('${data.id}')"
+                    <button type="button" data-site-edit="${escapeAttr(data.id)}"
                         class="btn btn--primary !py-1 !px-2 text-xs">Edit</button>
-                    <button type="button" onclick="deleteSite('${data.id}')"
+                    <button type="button" data-site-delete="${escapeAttr(data.id)}"
                         class="btn btn--ghost !py-1 !px-2 text-xs text-red-400 hover:!text-red-300 hover:!bg-red-500/10" aria-label="Hapus">Hapus</button>
                 </div>
             </td>
