@@ -1,6 +1,6 @@
 # 🚀 LinkFlow | Test Link Tracker
 
-[![Version](https://img.shields.io/badge/version-0.8.442106-indigo.svg?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.220426-indigo.svg?style=for-the-badge)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/status-verified-emerald.svg?style=for-the-badge)]()
 [![PWA](https://img.shields.io/badge/PWA-ready-orange.svg?style=for-the-badge)]()
 
@@ -18,6 +18,9 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 - **PWA Ready**: Dukungan Progressive Web App untuk pemasangan langsung di desktop atau mobile, lengkap dengan *Push Badges* untuk notifikasi riwayat baru.
 - **History & Diff Engine**: Pelacakan setiap perubahan data (tambah/hapus/edit) dengan pagination dan pembersihan otomatis data lama (>7 hari).
 - **Floating Tool Sheet**: Navigasi modern menggunakan FAB (Floating Action Button) untuk akses cepat ke Speedtest, Riwayat, dan Koneksi dalam satu panel elegan.
+- **Panel Admin**: Kelola situs (tambah, edit, hapus, urutkan, aktif/nonaktif), statistik, dan pengaturan aplikasi (judul, tagline, interval default, halaman Tentang, Google Safe Browsing).
+- **Mode Perawatan**: Aktifkan pesan pemeliharaan dari panel admin tanpa mengubah kode.
+- **Deteksi Blokir Server-Side**: Endpoint `/api/check-block` mengikuti redirect dan membaca isi halaman untuk mengenali halaman blokir ISP/Kominfo, opsional diperkuat Google Safe Browsing.
 
 ---
 
@@ -27,8 +30,8 @@ TestLink Worker adalah platform test link (link tracker) modern yang dirancang u
 - **Komponen UI**: [Preline UI](https://preline.co) (free), plugin vanilla berbasis data-attribute.
 - **Styling**: Design system sendiri di `css/styles.css` (token warna/spasi/radius, komponen `.btn/.card/.input/.badge/.table`). Lihat `docs/DESIGN_SYSTEM.md`.
 - **Visualisasi**: [Chart.js](https://www.chartjs.org/) untuk grafik performa Speedtest.
-- **Backend/Database**: Node.js & SQLite (untuk efisiensi memori dan persistensi data).
-- **API**: Terintegrasi dengan `ipapi.co` (ISP) dan `ip-api.com` (DNS Resolver).
+- **Backend/Database**: Node.js (Express 5) & SQLite via `sqlite3` (untuk efisiensi memori dan persistensi data).
+- **API**: Terintegrasi dengan `ipapi.co` (ISP), `ip-api.com` (DNS Resolver), dan Google Safe Browsing (opsional, API key diisi dari panel admin).
 
 > Catatan: Tailwind di-build ke `css/tailwind-built.css` (`npm run build:css`). Jalankan ulang setiap kali class Tailwind baru muncul di HTML/JS.
 
@@ -42,6 +45,7 @@ Salin `.env.example` menjadi `.env` lalu isi:
 | --- | --- | --- |
 | `ADMIN_PASSWORD` | Ya (produksi) | Sandi panel admin. Jika kosong, endpoint admin balas 503. |
 | `ALLOWED_ORIGINS` | Tidak | Daftar origin CORS tambahan, dipisah koma. |
+| `PORT` | Tidak | Port server lokal (default `3000`). |
 
 Sandi dev `rahasia123` hanya berlaku di localhost saat `ADMIN_PASSWORD` kosong dan bukan environment produksi.
 
@@ -68,6 +72,15 @@ Sandi dev `rahasia123` hanya berlaku di localhost saat `ADMIN_PASSWORD` kosong d
 
 ---
 
+## Pengujian & QA
+
+```bash
+npm test      # Unit test (node:test): js/utils.js & js/dialog.js
+npm run qa    # QA statis: referensi ID, handler onclick, kontras WCAG
+```
+
+---
+
 ## Akses Publik (Cloudflare Tunnel)
 
 Gunakan skrip pembantu `BukaTunnel.bat` untuk mengonlinekan server lokal Anda secara instan menggunakan Cloudflare Tunnel:
@@ -75,6 +88,60 @@ Gunakan skrip pembantu `BukaTunnel.bat` untuk mengonlinekan server lokal Anda se
 1. Pastikan `cloudflared` terinstal di komputer.
 2. Jalankan `BukaTunnel.bat`.
 3. Bagikan URL `trycloudflare.com` yang dihasilkan ke rekan kerja Anda.
+
+---
+
+## Deploy
+
+### Vercel
+
+`api/index.js` adalah entry point serverless (lihat `vercel.json`, semua traffic diarahkan ke fungsi ini). Catatan penting: di Vercel, SQLite ditulis ke `/tmp` sehingga data hilang saat restart atau cold start. Pakai untuk uji coba atau demo; untuk data yang menetap, jalankan server Node di VPS/mesin sendiri (folder `data/`).
+
+### Cloudflare Worker (domain tetap)
+
+Folder `cloudflare/` berisi reverse proxy ke backend Vercel untuk pemakaian domain sendiri:
+
+1. Set URL backend sebagai secret (sekali saja):
+   ```bash
+   cd cloudflare
+   npx wrangler secret put BACKEND_URL
+   ```
+   Isi dengan URL backend tanpa slash di akhir, mis. `https://testlink-xxxxx.vercel.app`.
+2. Deploy worker:
+   ```bash
+   npm run deploy:cf
+   ```
+3. Atur rute domain di dashboard Cloudflare: Workers & Pages → worker → Triggers → Routes.
+
+---
+
+## Struktur Proyek
+
+```
+api/index.js     Server Express: API, serve statis, SQLite
+index.html       Halaman utama (runner)
+admin.html       Panel admin
+about.html       Tentang & changelog
+js/              app.js, admin.js, admin-links.js, dialog.js, pwa.js, utils.js
+css/             styles.css (design system), tailwind.css -> tailwind-built.css
+sw.js            Service worker (cache shell PWA)
+cloudflare/      Worker reverse proxy (wrangler)
+scripts/         qa-static.js, make_icons.py
+test/ tests/     Unit test (node:test)
+docs/            PRD, design system, audit, laporan QA
+data/            Database SQLite lokal (gitignored)
+```
+
+---
+
+## Dokumentasi
+
+- `docs/PRD.md`: kebutuhan produk & alur utama.
+- `docs/DESIGN_SYSTEM.md`: token warna, spasi, radius, dan komponen.
+- `docs/PLAN.md`: rencana kerja per fase.
+- `docs/QA_REPORT.md`: hasil pengujian.
+- `docs/SECURITY_AUDIT.md` & `docs/ARCHITECTURE_AUDIT.md`: temuan audit keamanan & arsitektur.
+- `CHANGELOG.md`: riwayat versi.
 
 ---
 
