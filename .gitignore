@@ -1,4 +1,35 @@
+# Dependensi
 node_modules/
+
+# Environment & rahasia
 .env
+.env.*
+!.env.example
+
+# Database lokal
 data/
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Log & sementara
 *.log
+tmp/
+tmp_verify/
+
+# Tooling editor/agent
+.codebuddy/
+.review/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Aset hasil build/generate (bisa diregenerasi)
+# tailwind-built.css & icons tetap dicommit agar deploy tanpa build step tetap jalan;
+# hapus komentar baris di bawah jika ingin full build-less commit:
+# css/tailwind-built.css
+
+# Cloudflare
+cloudflare/.wrangler/
+.wrangler/

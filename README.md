@@ -127,7 +127,7 @@ css/             styles.css (design system), tailwind.css -> tailwind-built.css
 sw.js            Service worker (cache shell PWA)
 cloudflare/      Worker reverse proxy (wrangler)
 scripts/         qa-static.js, make_icons.py
-test/ tests/     Unit test (node:test)
+test/          Unit test (node:test)
 docs/            PRD, design system, audit, laporan QA
 data/            Database SQLite lokal (gitignored)
 ```
