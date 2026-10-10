@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#F6F7F4">
+    <script>
+        /* Tema: diterapkan sebelum paint (anti-FOUC). Default ikut sistem. */
+        (function () {
+            var KEY = 'tlw-theme';
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            function mode() {
+                try {
+                    var v = localStorage.getItem(KEY);
+                    return v === 'light' || v === 'dark' ? v : 'system';
+                } catch (e) { return 'system'; }
+            }
+            function resolved() {
+                var m = mode();
+                return m === 'dark' || (m === 'system' && mq.matches) ? 'dark' : 'light';
+            }
+            function apply() {
+                var m = mode();
+                var t = resolved();
+                document.documentElement.setAttribute('data-theme', t);
+                if (meta) meta.setAttribute('content', t === 'dark' ? '#10130F' : '#F6F7F4');
+                var btns = document.querySelectorAll('[data-theme-opt]');
+                for (var i = 0; i < btns.length; i++) {
+                    var on = btns[i].getAttribute('data-theme-opt') === m;
+                    btns[i].classList.toggle('is-on', on);
+                    btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+                }
+            }
+            window.v2SetTheme = function (m) {
+                if (m !== 'light' && m !== 'dark' && m !== 'system') return;
+                try { localStorage.setItem(KEY, m); } catch (e) { }
+                apply();
+            };
+            if (mq.addEventListener) mq.addEventListener('change', function () { if (mode() === 'system') apply(); });
+            apply();
+            document.addEventListener('DOMContentLoaded', apply);
+        })();
+    </script>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="TestLink">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <title>Test Link Worker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Utility compat: dipakai markup yang disuntik js/app.js, dialog.js, pwa.js -->
+    <link rel="stylesheet" href="/css/tailwind-built.css">
+    <!-- Design system v2 -->
+    <link rel="stylesheet" href="/css/v2.css">
+    <!-- Chart.js untuk grafik speed test (simulasi) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="v2-body">
+
+    <div id="maintenanceBanner" class="hidden v2-banner" role="status" aria-live="polite"></div>
+
+    <header class="v2-topbar">
+        <div class="v2-topbar__inner">
+            <div class="v2-brand">
+                <p class="v2-eyebrow">Worker</p>
+                <h1 id="appBrandTitle" class="v2-title">Test Link</h1>
+                <p id="appBrandTagline" class="v2-tagline">Runner link &amp; cek koneksi</p>
+                <p id="deviceIdDisplay" class="v2-device"></p>
+            </div>
+            <div class="v2-topbar__side">
+                <div class="v2-statuschip">
+                    <div id="statusIndicator" class="w-2 h-2 rounded-full bg-slate-600" aria-hidden="true"></div>
+                    <p id="focusStatus" class="v2-statuschip__text">Siap</p>
+                </div>
+                <div class="v2-datestamp" title="Terakhir database link berubah">
+                    <p class="v2-datestamp__label">Data link</p>
+                    <p class="v2-datestamp__value" id="dbUpdatedAtText">-</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="v2-container">
+
+        <!-- ============ TAB: ANTREAN ============ -->
+        <section id="panel-antrean" class="v2-panel is-active" aria-label="Antrean">
+            <div class="v2-section-head">
+                <h2 class="v2-section-title">Antrean</h2>
+                <p class="v2-section-sub">Pilih antrean untuk mulai menguji. Progres tersimpan per antrean.</p>
+            </div>
+            <div id="listDisplay" class="v2-list"></div>
+        </section>
+
+        <!-- ============ TAB: PROSES ============ -->
+        <section id="panel-proses" class="v2-panel" aria-label="Proses" hidden>
+            <div id="prosesEmpty" class="v2-empty">
+                <svg class="v2-empty__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                    </path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="v2-empty__title">Belum ada proses berjalan</p>
+                <p class="v2-empty__sub">Buka tab Antrean, lalu tekan Mulai pada salah satu antrean.</p>
+                <button type="button" onclick="v2Tab('antrean')" class="btn btn--secondary v2-empty__action">Ke
+                    Antrean</button>
+            </div>
+
+            <div id="statusCard" class="hidden card v2-runner">
+                <div class="v2-runner__head">
+                    <div class="v2-runner__meta">
+                        <p class="v2-label">Kategori</p>
+                        <h2 id="activeCatTitle" class="v2-runner__title">Situs</h2>
+                    </div>
+                    <div id="runnerStateBadge" class="badge badge--neutral" role="status">Siap</div>
+                </div>
+
+                <div class="v2-progressrow">
+                    <div class="progress v2-progress" aria-hidden="true">
+                        <div id="runnerProgressBar" class="progress__bar" style="width:0%"></div>
+                    </div>
+                    <span id="counter" class="v2-counter">0/0</span>
+                </div>
+
+                <div class="v2-urlbox">
+                    <div class="v2-urlbox__row">
+                        <div class="v2-urlbox__main">
+                            <p class="v2-label">Sedang diuji</p>
+                            <p id="currentLink" class="v2-url v2-url--current">Tunggu untuk memulai...</p>
+                        </div>
+                        <div id="countdownBox" class="hidden v2-countdown">
+                            <p class="v2-countdown__label">Buka berikutnya</p>
+                            <p id="countdownNumber" class="v2-countdown__num">3.00</p>
+                        </div>
+                    </div>
+                    <div class="v2-urlbox__row v2-urlbox__row--next">
+                        <div class="v2-urlbox__main">
+                            <p class="v2-label">Berikutnya</p>
+                            <p id="nextLinkSingle" class="v2-url v2-url--next">---</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sbReportBox" class="hidden v2-report">
+                    <div class="v2-report__head">
+                        <div class="v2-report__text">
+                            <p class="v2-report__title">Link terdeteksi blokir</p>
+                            <p class="v2-report__sub">Kemungkinan false positive. Uji manual dulu.</p>
+                        </div>
+                        <button type="button" onclick="clearSafeBrowsingReport()"
+                            class="btn btn--ghost btn--sm">Bersihkan</button>
+                    </div>
+                    <div id="sbReportList" class="v2-report__list"></div>
+                </div>
+
+                <div class="v2-settings">
+                    <div class="v2-switchrow">
+                        <div class="v2-switchrow__text">
+                            <p class="v2-switchrow__title">Mode operasi</p>
+                            <p id="modeDesc" class="v2-switchrow__desc">Buka link di tab baru, lalu kembali ke tab ini
+                                untuk lanjut</p>
+                        </div>
+                        <label class="v2-switch">
+                            <input type="checkbox" id="modeToggle" class="v2-switch__input"
+                                aria-label="Mode otomatis jeda">
+                            <span class="v2-switch__track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+
+                    <div id="manualValidationCtrl" class="v2-switchrow">
+                        <div class="v2-switchrow__text">
+                            <p class="v2-switchrow__title">Validasi manual</p>
+                            <p class="v2-switchrow__desc">Konfirmasi hasil normal, blokir, atau error untuk setiap link
+                            </p>
+                        </div>
+                        <label class="v2-switch">
+                            <input type="checkbox" id="manualValidationToggle" class="v2-switch__input"
+                                aria-label="Validasi manual">
+                            <span class="v2-switch__track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+
+                    <div id="intervalSection" class="v2-switchrow">
+                        <span class="v2-switchrow__title">Jeda antar link</span>
+                        <div class="v2-stepper">
+                            <button type="button" onclick="decrementInterval()" aria-label="Kurangi jeda"
+                                class="v2-stepper__btn">-</button>
+                            <input id="intervalInput" type="number" value="3" min="1" aria-label="Jeda dalam detik"
+                                class="v2-stepper__input">
+                            <button type="button" onclick="incrementInterval()" aria-label="Tambah jeda"
+                                class="v2-stepper__btn">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="validationBox" class="hidden v2-validate">
+                    <p class="v2-validate__eyebrow">Verifikasi hasil</p>
+                    <p id="validatingLink" class="v2-validate__link">---</p>
+                    <div class="v2-validate__grid">
+                        <button type="button" onclick="submitValidation('normal')" class="v2-validate__btn is-normal">
+                            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Normal
+                        </button>
+                        <button type="button" onclick="submitValidation('blokir')" class="v2-validate__btn is-block">
+                            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 6l12 12M18 6L6 18"></path>
+                            </svg>
+                            Blokir
+                        </button>
+                        <button type="button" onclick="submitValidation('error')" class="v2-validate__btn is-error">
+                            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v4m0 3h.01M10.3 4.3L2.7 17.7A2 2 0 004.4 20h15.2a2 2 0 001.7-2.3L13.7 4.3a2 2 0 00-3.4 0z">
+                                </path>
+                            </svg>
+                            Error
+                        </button>
+                    </div>
+                </div>
+
+                <div class="v2-dock">
+                    <div id="pingControls" class="v2-dock__row">
+                        <button type="button" onclick="openPingModal()" class="btn btn--primary btn--block">Cek Link
+                            Otomatis</button>
+                        <button type="button" onclick="finishPingPhase()" class="btn btn--ghost btn--block">Langsung
+                            Test Manual</button>
+                    </div>
+                    <div id="runnerControls" class="hidden v2-dock__row v2-dock__row--grid">
+                        <button type="button" id="startAutoBtn" onclick="startRunner()"
+                            class="btn btn--primary">Mulai</button>
+                        <button type="button" id="pauseBtn" onclick="pauseRunner()"
+                            class="btn btn--secondary hidden">Jeda</button>
+                        <button type="button" onclick="stopRunner()" class="btn btn--secondary">Stop</button>
+                    </div>
+                    <div id="completedControls" class="hidden v2-dock__row v2-dock__row--grid">
+                        <button type="button" onclick="runAgain()" class="btn btn--primary">Ulangi dari awal</button>
+                        <button type="button" onclick="backToQueues()" class="btn btn--secondary">Kembali ke
+                            antrean</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ TAB: ALAT ============ -->
+        <section id="panel-alat" class="v2-panel" aria-label="Alat" hidden>
+            <div class="v2-section-head">
+                <h2 class="v2-section-title">Alat</h2>
+                <p class="v2-section-sub">Pemeriksaan koneksi, riwayat, dan navigasi lain.</p>
+            </div>
+            <div class="v2-tools">
+                <button type="button" onclick="checkConnectionInfo()" class="v2-tool-row">
+                    <span class="v2-tool-row__icon is-accent">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M4.93 12.929a10 10 0 0114.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0">
+                            </path>
+                        </svg>
+                    </span>
+                    <span class="v2-tool-row__text">
+                        <span class="v2-tool-row__title">Cek koneksi &amp; DNS</span>
+                        <span class="v2-tool-row__sub">Browser, IP, provider, dan kesesuaian DNS</span>
+                    </span>
+                    <svg class="v2-icon v2-tool-row__chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+
+                <button type="button" onclick="openSpeedModal()" class="v2-tool-row">
+                    <span class="v2-tool-row__icon is-accent">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l2.5 2.5M3.6 15.5a9 9 0 1116.8 0"></path>
+                        </svg>
+                    </span>
+                    <span class="v2-tool-row__text">
+                        <span class="v2-tool-row__title">Speed test</span>
+                        <span class="v2-tool-row__sub">Simulasi unduh untuk memancing trafik</span>
+                    </span>
+                    <svg class="v2-icon v2-tool-row__chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+
+                <button type="button" onclick="openHistory()" class="v2-tool-row">
+                    <span class="v2-tool-row__icon is-accent">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </span>
+                    <span class="v2-tool-row__text">
+                        <span class="v2-tool-row__title">Riwayat</span>
+                        <span class="v2-tool-row__sub">Log link yang sudah diuji</span>
+                    </span>
+                    <svg class="v2-icon v2-tool-row__chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+
+                <a href="about.html" class="v2-tool-row">
+                    <span class="v2-tool-row__icon">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </span>
+                    <span class="v2-tool-row__text">
+                        <span class="v2-tool-row__title">Tentang</span>
+                        <span class="v2-tool-row__sub">Info aplikasi dan panduan singkat</span>
+                    </span>
+                    <svg class="v2-icon v2-tool-row__chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+
+                <a href="admin.html" class="v2-tool-row">
+                    <span class="v2-tool-row__icon">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                            </path>
+                        </svg>
+                    </span>
+                    <span class="v2-tool-row__text">
+                        <span class="v2-tool-row__title">Panel admin</span>
+                        <span class="v2-tool-row__sub">Kelola antrean dan pengaturan situs</span>
+                    </span>
+                    <svg class="v2-icon v2-tool-row__chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+            </div>
+
+            <section class="v2-set" aria-label="Tema tampilan">
+                <div class="v2-set__head">
+                    <h3 class="v2-set__title">Tema</h3>
+                    <p class="v2-set__desc">Ikut sistem secara default</p>
+                </div>
+                <div class="v2-seg" role="group" aria-label="Pilih tema">
+                    <button type="button" class="v2-seg__btn" data-theme-opt="system" aria-pressed="true"
+                        onclick="v2SetTheme('system')">Sistem</button>
+                    <button type="button" class="v2-seg__btn" data-theme-opt="light" aria-pressed="false"
+                        onclick="v2SetTheme('light')">Terang</button>
+                    <button type="button" class="v2-seg__btn" data-theme-opt="dark" aria-pressed="false"
+                        onclick="v2SetTheme('dark')">Gelap</button>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <nav class="v2-bottomnav" aria-label="Navigasi utama">
+        <button type="button" id="nav-antrean" onclick="v2Tab('antrean')"
+            class="v2-bottomnav__btn is-active" aria-label="Antrean">
+            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h10"></path>
+            </svg>
+            <span>Antrean</span>
+        </button>
+        <button type="button" id="nav-proses" onclick="v2Tab('proses')" class="v2-bottomnav__btn"
+            aria-label="Proses">
+            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                </path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Proses</span>
+        </button>
+        <button type="button" id="nav-alat" onclick="v2Tab('alat')" class="v2-bottomnav__btn" aria-label="Alat">
+            <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z">
+                </path>
+            </svg>
+            <span>Alat</span>
+        </button>
+    </nav>
+
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+    <!-- ============ MODAL: CEK KONEKSI & DNS ============ -->
+    <div id="connModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Cek koneksi dan DNS">
+        <div class="v2-modal__card">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__head">
+                <div>
+                    <p class="v2-eyebrow">Jaringan</p>
+                    <h2 class="v2-modal__title">Cek koneksi &amp; DNS</h2>
+                </div>
+                <button type="button" onclick="dismissConnModal()" class="v2-iconbtn" aria-label="Tutup">
+                    <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="v2-modal__body">
+                <dl class="v2-kv">
+                    <div class="v2-kv__row">
+                        <dt>Browser</dt>
+                        <dd id="connBrowser">---</dd>
+                    </div>
+                    <div class="v2-kv__row">
+                        <dt>Alamat IP</dt>
+                        <dd id="connIP">---</dd>
+                    </div>
+                    <div class="v2-kv__row">
+                        <dt>Provider</dt>
+                        <dd id="connISP">---</dd>
+                    </div>
+                    <div class="v2-kv__row">
+                        <dt>Tipe koneksi</dt>
+                        <dd id="connNetType">---</dd>
+                    </div>
+                    <div class="v2-kv__row">
+                        <dt>Estimasi bandwidth</dt>
+                        <dd id="connNetEff">---</dd>
+                    </div>
+                </dl>
+
+                <div class="v2-dnsbox">
+                    <div class="v2-dnsbox__head">
+                        <div id="dnsIndicator" class="w-2 h-2 rounded-full bg-slate-600" aria-hidden="true"></div>
+                        <p class="v2-dnsbox__title">DNS perangkat</p>
+                    </div>
+                    <p id="connDNS" class="v2-dnsbox__value">---</p>
+                    <p id="connDNSName" class="v2-dnsbox__name"></p>
+                    <div id="dnsDetailBox" class="hidden v2-dnsbox__detail"></div>
+                </div>
+
+                <div id="connProviderWarning" class="hidden v2-alert v2-alert--warning" role="status"></div>
+                <div id="connStatusAlert" class="hidden v2-alert v2-alert--info" role="status"></div>
+                <p id="connStatusText" class="v2-note"></p>
+            </div>
+            <div class="v2-modal__actions">
+                <button type="button" id="refreshConnBtn" onclick="checkConnectionInfo()"
+                    class="btn btn--primary btn--block">Periksa ulang</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: SPEED TEST ============ -->
+    <div id="speedModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Speed test">
+        <div class="v2-modal__card">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__head">
+                <div>
+                    <p class="v2-eyebrow">Simulasi</p>
+                    <h2 class="v2-modal__title">Speed test</h2>
+                </div>
+                <button type="button" onclick="closeSpeedModal()" class="v2-iconbtn" aria-label="Tutup">
+                    <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="v2-modal__body">
+                <div class="v2-speed__stats">
+                    <p class="v2-speed__value"><span id="speedValue">0.00</span><span class="v2-speed__unit">Mbps</span>
+                    </p>
+                    <p id="speedAvg" class="v2-speed__avg">Rata-rata: -</p>
+                </div>
+                <div class="progress v2-progress" aria-hidden="true">
+                    <div id="speedProgress" class="progress__bar" style="width:0%"></div>
+                </div>
+                <div class="v2-chartwrap">
+                    <canvas id="speedChart" height="150"></canvas>
+                </div>
+                <p class="v2-note">Simulasi unduh untuk memancing trafik. Angka bukan pengukuran jaringan asli.</p>
+            </div>
+            <div class="v2-modal__actions v2-modal__actions--grid">
+                <button type="button" id="speedStartBtn" onclick="runSpeedTest()" class="btn btn--primary">Mulai</button>
+                <button type="button" onclick="closeSpeedModal()" class="btn btn--secondary">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: DETAIL PERUBAHAN ============ -->
+    <div id="diffModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Detail perubahan">
+        <div class="v2-modal__card">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__head">
+                <div>
+                    <p class="v2-eyebrow">Riwayat</p>
+                    <h2 id="diffModalTitle" class="v2-modal__title">Perubahan</h2>
+                </div>
+                <button type="button" onclick="closeDiff()" class="v2-iconbtn" aria-label="Tutup">
+                    <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="v2-modal__body">
+                <div id="diffModalContent" class="v2-diff"></div>
+            </div>
+            <div class="v2-modal__actions">
+                <button type="button" onclick="closeDiff()" class="btn btn--secondary btn--block">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="v2-footer">
+        <p>&copy; <span id="footerYear">2026</span> Test Link Worker &middot; IDR-AH-B组 Artupski</p>
+        <p><a href="about.html">Tentang</a> &middot; <a href="admin.html">Panel admin</a></p>
+    </footer>
+
+    <!-- ============ MODAL: CEK LINK OTOMATIS (PING) ============ -->
+    <div id="pingModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Cek link otomatis">
+        <div class="v2-modal__card">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__head">
+                <div>
+                    <p class="v2-eyebrow">Diagnostik</p>
+                    <h2 class="v2-modal__title">Cek link otomatis</h2>
+                    <p id="pingStartTime" class="v2-modal__sub">-</p>
+                </div>
+                <div class="v2-modal__headside">
+                    <div id="pingStatusBadge"
+                        class="w-10 h-10 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs font-bold">
+                        --</div>
+                    <button type="button" onclick="closePingModal()" class="v2-iconbtn" aria-label="Tutup">
+                        <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="v2-modal__body">
+                <div class="v2-progressrow">
+                    <div class="progress v2-progress" aria-hidden="true">
+                        <div id="pingProgressBar" class="progress__bar" style="width:0%"></div>
+                    </div>
+                    <span id="pingPercentage" class="v2-counter">0%</span>
+                </div>
+                <p id="pingStats" class="v2-pingstats">Belum ada data</p>
+                <div id="pingTerminalWrapper" class="v2-terminal">
+                    <div class="v2-terminal__bar">
+                        <span></span><span></span><span></span>
+                        <p>Log</p>
+                    </div>
+                    <div id="pingModalTerminal" class="v2-terminal__body"></div>
+                </div>
+            </div>
+            <div class="v2-modal__actions v2-modal__actions--grid">
+                <button type="button" id="pingStartBtn" onclick="startPingTestDetailed()"
+                    class="btn btn--primary">Mulai tes</button>
+                <button type="button" id="pingResetBtn" onclick="resetPingTestDetailed()"
+                    class="btn btn--secondary">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: RIWAYAT ============ -->
+    <div id="historyModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Riwayat">
+        <div class="v2-modal__card v2-modal__card--wide">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__head">
+                <div>
+                    <p class="v2-eyebrow">Log</p>
+                    <h2 class="v2-modal__title">Riwayat</h2>
+                </div>
+                <button type="button" onclick="closeHistoryModal()" class="v2-iconbtn" aria-label="Tutup">
+                    <svg class="v2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="v2-modal__body">
+                <div class="v2-hist__controls">
+                    <input id="histSearch" type="search" placeholder="Cari link..." class="v2-input"
+                        aria-label="Cari di riwayat">
+                    <select id="histPerPage" onchange="changeHistPageSize()" class="v2-select"
+                        aria-label="Baris per halaman">
+                        <option value="10">10 / hal</option>
+                        <option value="20">20 / hal</option>
+                        <option value="50">50 / hal</option>
+                        <option value="100">100 / hal</option>
+                    </select>
+                </div>
+                <div id="historyModalDisplay" class="v2-hist__display"></div>
+            </div>
+            <div class="v2-modal__actions v2-hist__pager">
+                <button type="button" id="prevHistBtn" onclick="prevHistPage()"
+                    class="btn btn--secondary btn--sm">Sebelumnya</button>
+                <p id="histPageInfo" class="v2-hist__pageinfo">Halaman 1 dari 1</p>
+                <button type="button" id="nextHistBtn" onclick="nextHistPage()"
+                    class="btn btn--secondary btn--sm">Berikutnya</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: KONFIRMASI KELUAR ============ -->
+    <div id="exitModal" class="hidden v2-modal" role="dialog" aria-modal="true" aria-label="Konfirmasi keluar">
+        <div class="v2-modal__card">
+            <div class="v2-modal__grip" aria-hidden="true"></div>
+            <div class="v2-modal__body">
+                <p class="v2-eyebrow">Konfirmasi</p>
+                <h2 class="v2-modal__title">Yakin mau keluar?</h2>
+                <p class="v2-note">Antrean saat ini akan dijeda dan bisa dilanjutkan nanti.</p>
+            </div>
+            <div class="v2-modal__actions v2-modal__actions--grid">
+                <button type="button" onclick="cancelExit()" class="btn btn--secondary">Tetap di sini</button>
+                <button type="button" onclick="confirmExit()" class="btn btn--primary">Keluar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var TABS = ['antrean', 'proses', 'alat'];
+            window.v2Tab = function (name) {
+                if (TABS.indexOf(name) === -1) return;
+                TABS.forEach(function (t) {
+                    var panel = document.getElementById('panel-' + t);
+                    var btn = document.getElementById('nav-' + t);
+                    var active = t === name;
+                    if (panel) { panel.classList.toggle('is-active', active); panel.hidden = !active; }
+                    if (btn) {
+                        btn.classList.toggle('is-active', active);
+                        if (active) { btn.setAttribute('aria-current', 'page'); }
+                        else { btn.removeAttribute('aria-current'); }
+                    }
+                });
+            };
+
+            var statusCard = document.getElementById('statusCard');
+            var prosesEmpty = document.getElementById('prosesEmpty');
+            if (statusCard && window.MutationObserver) {
+                var sync = function () {
+                    var running = !statusCard.classList.contains('hidden');
+                    if (prosesEmpty) prosesEmpty.classList.toggle('hidden', running);
+                    window.v2Tab(running ? 'proses' : 'antrean');
+                };
+                new MutationObserver(sync).observe(statusCard, { attributes: true, attributeFilter: ['class'] });
+                sync();
+            }
+
+            var y = document.getElementById('footerYear');
+            if (y) y.textContent = String(new Date().getFullYear());
+        })();
+    </script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/dialog.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script src="/js/app.js"></script>
+  

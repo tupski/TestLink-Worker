@@ -9,11 +9,15 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-const pages = ['index.html', 'admin.html', 'about.html'];
+const pages = ['index.html', 'admin.html', 'about.html', 'index2.html'];
 const scripts = ['js/utils.js', 'js/dialog.js', 'js/app.js', 'js/admin.js', 'js/admin-links.js', 'js/pwa.js'];
 
 const htmlAll = pages.map(read).join('\n');
-const jsAll = scripts.map(read).join('\n');
+// Script inline di halaman (mis. window.v2SetTheme) dihitung sebagai definisi fungsi juga.
+const inlineJs = pages
+    .map((p) => [...read(p).matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n'))
+    .join('\n');
+const jsAll = scripts.map(read).join('\n') + '\n' + inlineJs;
 
 const problems = [];
 const notes = [];

@@ -124,16 +124,34 @@ function startDeadlineWatch() {
     deadlineWatchId = setInterval(tick, 200);
 }
 
-async function refreshHistoryBadgeMeta() {
+async function refreshHistoryMeta() {
     try {
         const r = await fetch(`${API_BASE}/api/history/meta`);
         if (!r.ok) return;
         const j = await r.json();
+        updateDbUpdatedAt(j.newestAt);
         const seen = parseInt(localStorage.getItem('__tl_hist_seen_id') || '0', 10) || 0;
         if (j.newestId > seen && 'setAppBadge' in navigator) {
             await navigator.setAppBadge(1).catch(() => {});
         }
     } catch (e) {}
+}
+
+// Label "Data link" di topbar: tampilkan tanggal terakhir database link berubah (format WIB dari server)
+const BULAN_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function parseWibParts(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s || ''));
+    if (!m) return null;
+    return { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
+}
+
+function updateDbUpdatedAt(newestAt) {
+    const el = document.getElementById('dbUpdatedAtText');
+    if (!el) return;
+    const p = parseWibParts(newestAt);
+    if (!p) { el.textContent = '-'; return; }
+    el.textContent = `${p.d} ${BULAN_ID[p.mo - 1]} ${p.y} ${String(p.h).padStart(2, '0')}:${String(p.mi).padStart(2, '0')}`;
 }
 
 async function clearHistoryBadgeSeen() {
@@ -159,11 +177,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadHistory();
     initInterceptors();
     initModeToggles();
+    initV2Modals();
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         closeToolsSheet();
+        const topModal = v2TopModal();
+        if (topModal) return closeV2Modal(topModal);
+        // Kompatibilitas index.html lama (modal non v2-modal)
         const speedModal = document.getElementById('speedModal');
-        if (speedModal && !speedModal.classList.contains('hidden')) closeSpeedModal();
+        if (speedModal && !speedModal.classList.contains('hidden')) return closeSpeedModal();
+        const historyModal = document.getElementById('historyModal');
+        if (historyModal && !historyModal.classList.contains('hidden')) return closeHistoryModal();
     });
     // Delegasi aksi kartu antrean (menggantikan onclick berisi data server)
     document.addEventListener('click', (e) => {
@@ -175,8 +199,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     checkConnectionInfo();
     registerPWA();
-    refreshHistoryBadgeMeta();
-    setInterval(refreshHistoryBadgeMeta, 120000);
+    refreshHistoryMeta();
+    setInterval(refreshHistoryMeta, 120000);
 });
 
 // PENCEGAHAN KELUAR & REFRESH (hanya saat runner/ping aktif)
@@ -189,12 +213,12 @@ function initInterceptors() {
 
     history.pushState(null, null, location.href);
     window.addEventListener('popstate', function() {
-        document.getElementById('exitModal').classList.remove('hidden');
+        openV2Modal(document.getElementById('exitModal'));
         history.pushState(null, null, location.href);
     });
 }
 
-function cancelExit() { document.getElementById('exitModal').classList.add('hidden'); }
+function cancelExit() { closeV2Modal(document.getElementById('exitModal')); }
 function confirmExit() { 
     window.onbeforeunload = null;
     history.back(); 
@@ -220,7 +244,7 @@ async function loadSites() {
             };
         });
         renderSiteList();
-        refreshHistoryBadgeMeta();
+        refreshHistoryMeta();
     } catch (err) {
         console.error(err);
         document.getElementById('listDisplay').innerHTML = `<p class="text-xs text-red-500 font-black p-6 text-center italic uppercase">Error: ${escapeHtml(err.message)}</p>`;
@@ -733,7 +757,7 @@ function fillNetworkConnectionFields() {
 
 // LOGIKA VERIFIKASI KONEKSI
 async function checkConnectionInfo() {
-    document.getElementById('connModal').classList.remove('hidden');
+    openV2Modal(document.getElementById('connModal'));
     const btn = document.getElementById('refreshConnBtn');
     btn.disabled = true; btn.innerText = "Mengecek...";
 
@@ -781,11 +805,11 @@ async function checkConnectionInfo() {
     }
 }
 
-function dismissConnModal() { document.getElementById('connModal').classList.add('hidden'); }
+function dismissConnModal() { closeV2Modal(document.getElementById('connModal')); }
 
 // SPEEDTEST DENGAN GRAFIK
 function openSpeedModal() {
-    document.getElementById('speedModal').classList.remove('hidden');
+    openV2Modal(document.getElementById('speedModal'));
     initSpeedChart();
 }
 
@@ -841,7 +865,7 @@ function runSpeedTest() {
     }, 100);
 }
 
-function closeSpeedModal() { document.getElementById('speedModal').classList.add('hidden'); }
+function closeSpeedModal() { closeV2Modal(document.getElementById('speedModal')); }
 
 // PING TERMINAL & SKIP FAIL LINKS
 async function pingUrl(url) {
@@ -866,7 +890,7 @@ async function pingUrl(url) {
 }
 
 function openPingModal() {
-    document.getElementById('pingModal').classList.remove('hidden');
+    openV2Modal(document.getElementById('pingModal'));
     const data = categories[activeCatId];
     if (!data) return;
     const badge = document.getElementById('pingStatusBadge');
@@ -957,8 +981,7 @@ function resetPingTestDetailed() {
 }
 
 function closePingModal() {
-    document.getElementById('pingModal').classList.add('hidden');
-    finishPingPhase();
+    closeV2Modal(document.getElementById('pingModal'));
 }
 
 function finishPingPhase() {
@@ -966,29 +989,112 @@ function finishPingPhase() {
     renderRunnerState();
 }
 
+// ---------- Modal v2: buka/tutup beranimasi + gestur sheet ----------
+function openV2Modal(el) {
+    if (!el) return;
+    el.classList.remove('hidden', 'is-closing');
+    el.classList.add('open');
+}
+
+function v2AfterClose(modal) {
+    if (modal.id === 'pingModal') finishPingPhase();
+    if (modal.id === 'historyModal' && typeof HSOverlay !== 'undefined') HSOverlay.close(modal);
+    modal.classList.remove('is-closing', 'open');
+    modal.classList.add('hidden');
+}
+
+function closeV2Modal(modal) {
+    if (!modal || modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
+    const card = modal.querySelector('.v2-modal__card');
+    if (!card) return v2AfterClose(modal);
+    modal.classList.add('is-closing');
+    let done = false;
+    const finish = () => { if (done) return; done = true; v2AfterClose(modal); };
+    card.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, 420);
+}
+
+function v2TopModal() {
+    const order = ['diffModal', 'connModal', 'speedModal', 'pingModal', 'historyModal', 'exitModal'];
+    for (let i = 0; i < order.length; i++) {
+        const el = document.getElementById(order[i]);
+        if (el && el.classList.contains('v2-modal') && !el.classList.contains('hidden')) return el;
+    }
+    return null;
+}
+
+function initV2Modals() {
+    // Tap di luar kartu menutup popup
+    document.addEventListener('click', (e) => {
+        const modal = e.target.closest('.v2-modal');
+        if (modal && e.target === modal) closeV2Modal(modal);
+    });
+
+    // Drag ke bawah pada grip/kepala menutup sheet (khusus mobile)
+    document.querySelectorAll('.v2-modal').forEach((modal) => {
+        const card = modal.querySelector('.v2-modal__card');
+        if (!card) return;
+        let drag = null;
+
+        card.addEventListener('pointerdown', (e) => {
+            if (!window.matchMedia('(max-width: 479px)').matches) return;
+            if (modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
+            if (e.button !== 0) return;
+            if (e.target.closest('button, a, input, select, textarea')) return;
+            if (!e.target.closest('.v2-modal__grip, .v2-modal__head')) return;
+            drag = { id: e.pointerId, startY: e.clientY, startT: performance.now(), delta: 0 };
+            card.style.transition = 'none';
+            try { card.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+
+        card.addEventListener('pointermove', (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag.delta = Math.max(0, e.clientY - drag.startY);
+            card.style.transform = `translateY(${drag.delta}px)`;
+        });
+
+        const endDrag = (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            const delta = drag.delta;
+            const elapsed = performance.now() - drag.startT;
+            drag = null;
+            const threshold = Math.min(140, card.offsetHeight * 0.3);
+            if (delta > threshold || (delta > 48 && elapsed < 260)) {
+                card.style.transition = 'transform .22s cubic-bezier(.4, 0, 1, 1)';
+                card.style.transform = 'translateY(100%)';
+                setTimeout(() => {
+                    card.style.transition = '';
+                    card.style.transform = '';
+                    v2AfterClose(modal);
+                }, 230);
+            } else {
+                card.style.transition = 'transform .22s cubic-bezier(.2, .8, .2, 1)';
+                card.style.transform = '';
+                setTimeout(() => { card.style.transition = ''; }, 240);
+            }
+        };
+
+        card.addEventListener('pointerup', endDrag);
+        card.addEventListener('pointercancel', endDrag);
+    });
+}
+
 // RIWAYAT AKTIVITAS - PAGINATION & CLEANUP
 async function loadHistory() {
     try {
         const res = await fetch(`${API_BASE}/api/history`);
         const data = await res.json();
-        const rawHistory = data.history || [];
-        
-        // Auto-cleanup items older than 7 days
-        const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-        histData = rawHistory.filter(item => {
-            const itemDate = new Date(item.created_at).getTime();
-            return itemDate >= sevenDaysAgo;
-        });
+        histData = data.history || [];
         
         renderHistory();
-        refreshHistoryBadgeMeta();
+        refreshHistoryMeta();
     } catch (e) {}
 }
 
 async function openHistory() {
-    document.getElementById('historyModal').classList.remove('hidden');
+    const modal = document.getElementById('historyModal');
+    openV2Modal(modal);
     if (typeof HSOverlay !== 'undefined') {
-        const modal = document.getElementById('historyModal');
         HSOverlay.open(modal);
     }
     await loadHistory();
@@ -996,11 +1102,7 @@ async function openHistory() {
 }
 
 function closeHistoryModal() {
-    document.getElementById('historyModal').classList.add('hidden');
-    if (typeof HSOverlay !== 'undefined') {
-        const modal = document.getElementById('historyModal');
-        HSOverlay.close(modal);
-    }
+    closeV2Modal(document.getElementById('historyModal'));
 }
 
 function renderHistory() {
@@ -1098,12 +1200,12 @@ function showDiffDetails(globalIdx, type) {
     let p = { added: [], removed: [] };
     try { p = JSON.parse(item.diff_details || '{}'); } catch (e) {}
     const links = p[type] || [];
-    document.getElementById('diffModal').classList.remove('hidden');
+    openV2Modal(document.getElementById('diffModal'));
     document.getElementById('diffModalTitle').innerText = type === 'added' ? 'LINK DITAMBAHKAN' : 'LINK DIHAPUS';
     document.getElementById('diffModalContent').innerHTML = links.map(l => `<div>• ${escapeHtml(l)}</div>`).join("") || "Kosong.";
 }
 
-function closeDiff() { document.getElementById('diffModal').classList.add('hidden'); }
+function closeDiff() { closeV2Modal(document.getElementById('diffModal')); }
 
 async function resetProgress(siteId) {
     if (isRunning || pingInProgress) return showToast('Stop runner atau ping dulu sebelum reset.');

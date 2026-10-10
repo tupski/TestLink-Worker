@@ -1,5 +1,5 @@
 /* Minimal SW: cache shell app; bump CACHE untuk invalidate */
-const CACHE = 'testlink-v13';
+const CACHE = 'testlink-v17';
 const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/utils.js', '/js/dialog.js', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/js/pwa.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -32,6 +32,8 @@ self.addEventListener('fetch', (e) => {
     if (u.origin !== self.location.origin) return;
     if (e.request.method !== 'GET') return;
     if (u.pathname.startsWith('/api')) return;
+    // Halaman review index2.html + css v2: jangan di-cache sampai promosi
+    if (u.pathname === '/index2.html' || u.pathname === '/css/v2.css') return;
     e.respondWith(
         caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
             const copy = res.clone();
