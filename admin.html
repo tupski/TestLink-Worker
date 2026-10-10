@@ -23,7 +23,7 @@
 
     <!-- Sidebar (drawer di mobile, tetap di desktop) -->
     <aside id="adminSidebar"
-        class="hs-overlay [--auto-close:lg] lg:block lg:translate-x-0 lg:static lg:z-auto
+        class="hs-overlay [--auto-close:lg] lg:block lg:translate-x-0
             hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform
             hidden fixed top-0 start-0 bottom-0 z-[60] w-64 bg-slate-900 border-e border-slate-800"
         role="dialog" tabindex="-1" aria-label="Navigasi admin">
@@ -59,7 +59,7 @@
             <a href="/" class="text-xs text-slate-400 hover:text-white">Worker</a>
         </header>
 
-        <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 sm:py-8">
+        <main class="admin-main flex-1 max-w-3xl w-full mx-auto px-4 py-6 sm:py-8">
             <!-- Panel: Ringkas -->
             <div data-tab-panel="dash" class="space-y-4">
                 <div class="flex items-start justify-between gap-4">
@@ -212,16 +212,16 @@
                     <p class="text-sm text-slate-400 mt-1">Branding worker, runner, pemeliharaan, dan keamanan pemindaian.</p>
                 </div>
 
-                <!-- Navigasi bagian -->
-                <div class="flex gap-1 overflow-x-auto no-scrollbar border-b border-slate-800" role="tablist" aria-label="Bagian pengaturan">
+                <!-- Navigasi bagian: switching vanilla (js/admin.js); --prevent-on-load-init mematikan HSTabs Preline -->
+                <div class="flex gap-1 overflow-x-auto no-scrollbar border-b border-slate-800 --prevent-on-load-init" role="tablist" aria-label="Bagian pengaturan">
                     <button type="button" role="tab" id="set-tabnav-umum" aria-controls="set-tab-umum" aria-selected="true"
-                        class="settings-tab" data-hs-tab="#set-tab-umum">Umum</button>
+                        class="settings-tab active">Umum</button>
                     <button type="button" role="tab" id="set-tabnav-runner" aria-controls="set-tab-runner" aria-selected="false"
-                        class="settings-tab" data-hs-tab="#set-tab-runner">Runner</button>
+                        class="settings-tab">Runner</button>
                     <button type="button" role="tab" id="set-tabnav-maintenance" aria-controls="set-tab-maintenance" aria-selected="false"
-                        class="settings-tab" data-hs-tab="#set-tab-maintenance">Pemeliharaan</button>
+                        class="settings-tab">Pemeliharaan</button>
                     <button type="button" role="tab" id="set-tabnav-security" aria-controls="set-tab-security" aria-selected="false"
-                        class="settings-tab" data-hs-tab="#set-tab-security">Keamanan</button>
+                        class="settings-tab">Keamanan</button>
                 </div>
 
                 <!-- Bagian: Umum -->
@@ -409,7 +409,7 @@
     </div>
 
     <!-- Preline UI (free): plugin interaktif via data-attribute -->
-    <script src="https://cdn.jsdelivr.net/npm/preline@2/dist/preline.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/preline@2.5.1/dist/preline.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/dialog.js"></script>
     <script src="/js/pwa.js"></script>

@@ -74,6 +74,13 @@ body {
     padding: 2rem 1rem;
 }
 
+/* Desktop: konten admin melebar agar tabel & grid tidak terjepit; di bawah 1024px tetap max-w-3xl dari markup */
+@media (min-width: 1024px) {
+    .admin-main {
+        max-width: 72rem;
+    }
+}
+
 /* Topbar: satu-satunya elemen dengan blur (batas R-10) */
 .app-topbar {
     position: sticky;
@@ -283,7 +290,7 @@ select.input {
     box-shadow: inset 3px 0 0 var(--primary);
 }
 
-/* Tab bagian pengaturan (Preline data-hs-tab) */
+/* Tab bagian pengaturan */
 .settings-tab {
     flex-shrink: 0;
     padding: 0.5rem 0.875rem;

@@ -95,11 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => showTab(btn.getAttribute('data-tab-btn')));
     });
 
-    // Sinkronkan aria-selected pada tab bagian pengaturan (visibilitas diatur Preline)
-    document.querySelectorAll('[data-hs-tab]').forEach((tab) => {
+    // Tab bagian pengaturan: switching vanilla (tidak bergantung versi Preline).
+    const settingsTabs = [...document.querySelectorAll('.settings-tab')];
+    settingsTabs.forEach((tab) => {
         tab.addEventListener('click', () => {
-            document.querySelectorAll('[data-hs-tab]').forEach((t) => {
-                t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+            settingsTabs.forEach((t) => {
+                const isActive = t === tab;
+                const panel = document.getElementById(t.getAttribute('aria-controls'));
+                t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                t.classList.toggle('active', isActive);
+                if (panel) panel.classList.toggle('hidden', !isActive);
             });
         });
     });

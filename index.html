@@ -429,10 +429,10 @@
 
     <!-- History Modal (Preline overlay) -->
         <div id="historyModal"
-            class="hs-overlay hidden fixed inset-0 z-[1100] hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 lg:max-w-2xl"
+            class="hs-overlay hidden fixed inset-0 z-[1100] hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300"
             role="dialog" aria-modal="true" aria-labelledby="historyModalTitle" tabindex="-1">
-            <div class="hs-overlay-backdrop bg-slate-950/85 fixed inset-0" data-hs-overlay="historyModal"></div>
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col h-[70vh] max-h-[70vh]">
+            <div class="hs-overlay-backdrop bg-slate-950/85 fixed inset-0" aria-hidden="true" onclick="closeHistoryModal()"></div>
+            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col h-[70vh] max-h-[70vh] lg:max-w-2xl">
                 <div class="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                     <h3 id="historyModalTitle" class="text-lg font-semibold text-white">Riwayat Perubahan TestLink</h3>
                     <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-white text-xl leading-none" aria-label="Tutup">×</button>
@@ -542,7 +542,7 @@
     </footer>
 
     <!-- Preline UI (free): plugin interaktif via data-attribute -->
-    <script src="https://cdn.jsdelivr.net/npm/preline@2/dist/preline.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/preline@2.5.1/dist/preline.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/dialog.js"></script>
     <script src="/js/pwa.js"></script>
