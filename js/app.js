@@ -596,6 +596,18 @@ function closeRunnerTab() {
     runnerTab = null;
 }
 
+// Anti-throttle background tab: di mode Otomatis Jeda, PWA harus tetap foreground
+// supaya setInterval tick aktif. Chrome/Brave auto-focus tab baru hasil window.open(),
+// jadi kita rebut balik fokus dari event blur.
+window.addEventListener('blur', () => {
+    if (modeAuto && isRunning && runnerTab && !runnerTab.closed) {
+        // Tunda sedikit agar browser selesai settling event loop nya.
+        setTimeout(() => {
+            if (modeAuto && isRunning) window.focus();
+        }, 50);
+    }
+});
+
 document.addEventListener('visibilitychange', () => {
     if (modeAuto && isRunning && countdownDeadlineMs) {
         const rem = countdownDeadlineMs - Date.now();
