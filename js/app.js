@@ -27,6 +27,8 @@ let awaitingValidation = false;
 let validatingUrl = "";
 let awaitingFocusReturn = false;
 let pingInProgress = false;
+/** Window handle tab test link yang sedang dibuka runner. null = belum ada / sudah ditutup user. Diset dari window.open() dan dipakai ulang agar tab test link selalu cuma satu (tidak menumpuk). */
+let runnerTab = null;
 
 // History State
 let histData = [];
@@ -421,6 +423,7 @@ function stopRunner() {
     document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-slate-600';
     document.getElementById('focusStatus').innerText = 'Standby';
     runnerState = 'ready';
+    closeRunnerTab();
     renderRunnerState();
 }
 
@@ -519,7 +522,7 @@ async function executeOpenLink() {
 
         document.getElementById('currentLink').innerText = url + (blocked ? (isGsbThreat ? '  ·  ditolak GSB' : '  ·  redirect blokir') : '');
         if (!blocked) {
-            try { window.open(fullUrl, '_blank'); } catch (e) {}
+            openOrReuseRunnerTab(fullUrl);
         } else {
             const msg = isGsbThreat ? 'Bahaya Malicious Terdeteksi Google Safe Browsing, dilewati.' : 'Link redirect ke halaman blokir Kominfo, dilewati.';
             showToast(msg);
@@ -551,6 +554,43 @@ async function executeOpenLink() {
     } finally {
         countdownFiring = false;
     }
+}
+
+/**
+ * Buka tab baru untuk test link, atau navigasi ulang tab runner yang sudah hidup
+ * sehingga tab test link selalu cuma 1 (tidak menumpuk).
+ * Jika user sudah menutup tab manual, `runnerTab.closed` jadi true dan kita reset
+ * referensi agar iterasi berikutnya otomatis buka tab baru lagi.
+ * @param {string} fullUrl
+ */
+function openOrReuseRunnerTab(fullUrl) {
+    if (runnerTab && runnerTab.closed) {
+        runnerTab = null;
+    }
+    if (runnerTab) {
+        try {
+            // Setter location.href tidak kena same-origin restriction (hanya getter).
+            runnerTab.location.href = fullUrl;
+            runnerTab.focus();
+            return;
+        } catch (e) {
+            // Tab sudah ditutup oleh browser di antara cek dan set (race) → buka ulang
+            runnerTab = null;
+        }
+    }
+    try {
+        runnerTab = window.open(fullUrl, '_blank');
+    } catch (e) {
+        runnerTab = null;
+    }
+}
+
+/** Tutup tab test link kalau masih hidup. Dipakai saat stop/finish agar tab tidak tertinggal. */
+function closeRunnerTab() {
+    if (runnerTab && !runnerTab.closed) {
+        try { runnerTab.close(); } catch (e) {}
+    }
+    runnerTab = null;
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -637,6 +677,7 @@ function finishJobs() {
     document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-emerald-500';
     document.getElementById('focusStatus').innerText = 'Selesai';
     runnerState = 'completed';
+    closeRunnerTab();
     renderRunnerState();
     showToast('Antrean selesai. Semua link sudah dibuka.');
 }
