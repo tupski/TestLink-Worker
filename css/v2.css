@@ -956,7 +956,7 @@ body.v2-body {
 #appUpdateBanner { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px); }
 
 /* ---------- Floating variant switcher override (v2) ---------- */
-/* Naikkan di atas bottom-nav v2 dan gunakan token v2. Pulse tetap dari styles.css. */
+/* Naikkan di atas bottom-nav v2 dan gunakan token v2. Keyframe hijau override default di components.css. */
 .v2-body .float-variant {
     --float-variant-bottom: calc(var(--nav-h) + 16px);
     background: var(--surface);
