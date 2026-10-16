@@ -998,6 +998,22 @@ body.v2-body {
     }
 }
 
+/* ---------- PWA install banner override (v2) ---------- */
+/* Tampilkan di atas topbar v2 (z-40) dengan accent hijau. */
+.v2-body .pwa-install {
+    z-index: 1999;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    box-shadow: 0 4px 16px -6px rgba(23, 33, 27, 0.35);
+}
+
+.v2-body .pwa-install__btn--primary {
+    color: var(--accent-strong);
+}
+
+.v2-body .pwa-install__btn--primary:hover {
+    background: rgba(255, 255, 255, 0.94);
+}
+
 /* Banner maintenance */
 .v2-banner {
     background: var(--warning-soft);
