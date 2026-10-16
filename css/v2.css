@@ -98,8 +98,6 @@ body.v2-body {
     -webkit-font-smoothing: antialiased;
 }
 
-.hidden { display: none !important; }
-[hidden] { display: none !important; }
 ::selection { background: var(--accent-soft); }
 
 :focus-visible {
