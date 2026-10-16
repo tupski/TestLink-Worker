@@ -369,10 +369,22 @@ function renderRunnerState() {
     if (inRunnerPhase) {
         const startBtn = document.getElementById('startAutoBtn');
         const pauseBtn = document.getElementById('pauseBtn');
-        const showStart = runnerState === 'ready' || runnerState === 'paused';
-        startBtn.classList.toggle('hidden', !showStart);
-        startBtn.innerText = runnerState === 'paused' ? 'Lanjut' : 'Mulai';
-        pauseBtn.classList.toggle('hidden', runnerState !== 'running');
+        if (pauseBtn) {
+            // Pola lama (v2): 3 tombol, pauseBtn terpisah
+            const showStart = runnerState === 'ready' || runnerState === 'paused';
+            startBtn.classList.toggle('hidden', !showStart);
+            startBtn.innerText = runnerState === 'paused' ? 'Lanjut' : 'Mulai';
+            pauseBtn.classList.toggle('hidden', runnerState !== 'running');
+        } else {
+            // Pola baru (v1): 2 tombol, startAutoBtn jadi toggle (Mulai / Jeda / Lanjut)
+            if (runnerState === 'running' || runnerState === 'waiting-focus') {
+                startBtn.innerText = 'Jeda';
+            } else if (runnerState === 'paused') {
+                startBtn.innerText = 'Lanjut';
+            } else {
+                startBtn.innerText = 'Mulai';
+            }
+        }
     }
 
     // Konfigurasi hanya bisa diubah saat tidak berjalan
@@ -381,6 +393,15 @@ function renderRunnerState() {
     const mvToggle = document.getElementById('manualValidationToggle');
     if (modeToggle) modeToggle.disabled = locked;
     if (mvToggle) mvToggle.disabled = locked || modeAuto;
+}
+
+function toggleRunner() {
+    // Dipakai oleh v1 (pola 2 tombol): startAutoBtn jadi Mulai/Jeda/Lanjut.
+    if (runnerState === 'running' || runnerState === 'waiting-focus') {
+        pauseRunner();
+    } else {
+        startRunner();
+    }
 }
 
 function startRunner() {

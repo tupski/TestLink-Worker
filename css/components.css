@@ -1,0 +1,9 @@
+/* ============================================================
+   Shared components — dipakai index.html (v1) & index2.html (v2)
+   Tema (styles.css / v2.css) override warna + offset via cascade.
+   ============================================================ */
+
+/* Utility defensif: `.hidden` dari Tailwind terbentur `.btn { display: inline-flex }` (specificity sama,
+   cascade tailwind-built < components < tema). Pakai !important agar toggle visibility konsisten. */
+.hidden { display: none !important; }
+[hidden] { display: none !important; }

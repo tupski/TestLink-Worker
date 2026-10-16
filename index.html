@@ -16,6 +16,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/styles.css">
     <!-- Chart.js for Speedtest Graph -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -141,8 +142,7 @@
 
             <!-- Fase Runner -->
             <div id="runnerControls" class="grid grid-cols-2 gap-3 hidden">
-                <button type="button" id="startAutoBtn" onclick="startRunner()" class="btn btn--primary">Mulai</button>
-                <button type="button" id="pauseBtn" onclick="pauseRunner()" class="btn btn--secondary hidden">Jeda</button>
+                <button type="button" id="startAutoBtn" onclick="toggleRunner()" class="btn btn--primary">Mulai</button>
                 <button type="button" onclick="stopRunner()" class="btn btn--secondary">Stop</button>
             </div>
 

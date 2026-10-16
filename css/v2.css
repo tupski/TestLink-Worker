@@ -100,6 +100,7 @@ body.v2-body {
 
 .hidden { display: none !important; }
 [hidden] { display: none !important; }
+
 ::selection { background: var(--accent-soft); }
 
 :focus-visible {
@@ -1059,4 +1060,5 @@ body.v2-body {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
- 
+    }
+}
