@@ -527,6 +527,92 @@ select.input {
     transform: scale(0.98);
 }
 
+/* ---------- Floating variant switcher (pojok kiri bawah) ---------- */
+/* Dipakai bersama index.html (v1) dan index2.html (v2). Default offset di sini;
+   v2.css override --float-variant-bottom supaya di atas bottom-nav v2. */
+
+.float-variant {
+    --float-variant-bottom: 1.25rem;
+    position: fixed;
+    left: max(1rem, env(safe-area-inset-left, 0px));
+    bottom: calc(var(--float-variant-bottom) + env(safe-area-inset-bottom, 0px));
+    z-index: 800;            /* di bawah .fab-tools (850) dan toast */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;        /* target sentuh min */
+    padding: 0.625rem 1rem;
+    border-radius: 9999px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow:
+        0 6px 18px -8px rgba(0, 0, 0, 0.35),
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 0 0 0 rgba(99, 102, 241, 0);
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+    animation: float-variant-pulse 2.4s ease-in-out infinite;
+    will-change: box-shadow, transform;
+}
+
+.float-variant:hover,
+.float-variant:focus-visible {
+    background: var(--surface-raised);
+    border-color: var(--border-strong);
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow:
+        0 10px 22px -10px rgba(0, 0, 0, 0.45),
+        0 2px 4px rgba(0, 0, 0, 0.12),
+        0 0 0 0 rgba(99, 102, 241, 0);
+}
+
+.float-variant:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.float-variant:active {
+    transform: scale(0.98);
+}
+
+.float-variant__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    stroke-width: 2;
+}
+
+@keyframes float-variant-pulse {
+    0%, 100% {
+        box-shadow:
+            0 6px 18px -8px rgba(0, 0, 0, 0.35),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 0 rgba(99, 102, 241, 0);
+    }
+    50% {
+        box-shadow:
+            0 8px 20px -8px rgba(0, 0, 0, 0.4),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 8px rgba(99, 102, 241, 0.18);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .float-variant {
+        animation: none;
+    }
+    .float-variant:hover,
+    .float-variant:focus-visible,
+    .float-variant:active {
+        transform: none;
+    }
+}
+
 /* ---------- Utilitas ---------- */
 
 .safe-pb {

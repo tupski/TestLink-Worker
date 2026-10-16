@@ -955,6 +955,49 @@ body.v2-body {
 /* Banner update PWA: naikkan agar tidak tertutup bottom nav */
 #appUpdateBanner { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px); }
 
+/* ---------- Floating variant switcher override (v2) ---------- */
+/* Naikkan di atas bottom-nav v2 dan gunakan token v2. Pulse tetap dari styles.css. */
+.v2-body .float-variant {
+    --float-variant-bottom: calc(var(--nav-h) + 16px);
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--ink);
+    box-shadow:
+        0 6px 18px -8px rgba(23, 33, 27, 0.25),
+        0 2px 4px rgba(23, 33, 27, 0.06),
+        0 0 0 0 rgba(14, 122, 95, 0);
+}
+
+.v2-body .float-variant:hover,
+.v2-body .float-variant:focus-visible {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    color: var(--ink);
+    box-shadow:
+        0 10px 22px -10px rgba(23, 33, 27, 0.3),
+        0 2px 4px rgba(23, 33, 27, 0.08),
+        0 0 0 0 rgba(14, 122, 95, 0);
+}
+
+.v2-body .float-variant:focus-visible {
+    outline-color: var(--accent);
+}
+
+@keyframes float-variant-pulse {
+    0%, 100% {
+        box-shadow:
+            0 6px 18px -8px rgba(23, 33, 27, 0.25),
+            0 2px 4px rgba(23, 33, 27, 0.06),
+            0 0 0 0 rgba(14, 122, 95, 0);
+    }
+    50% {
+        box-shadow:
+            0 8px 20px -8px rgba(23, 33, 27, 0.3),
+            0 2px 4px rgba(23, 33, 27, 0.08),
+            0 0 0 8px rgba(14, 122, 95, 0.2);
+    }
+}
+
 /* Banner maintenance */
 .v2-banner {
     background: var(--warning-soft);
