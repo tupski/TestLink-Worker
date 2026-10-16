@@ -571,7 +571,9 @@ function openOrReuseRunnerTab(fullUrl) {
         try {
             // Setter location.href tidak kena same-origin restriction (hanya getter).
             runnerTab.location.href = fullUrl;
-            runnerTab.focus();
+            // modeAuto: user tetap di PWA supaya setInterval tick tidak ke-throttle background tab.
+            // !modeAuto: user harus ke tab test link untuk validasi → fokuskan.
+            if (!modeAuto) runnerTab.focus();
             return;
         } catch (e) {
             // Tab sudah ditutup oleh browser di antara cek dan set (race) → buka ulang
@@ -580,6 +582,7 @@ function openOrReuseRunnerTab(fullUrl) {
     }
     try {
         runnerTab = window.open(fullUrl, '_blank');
+        if (!modeAuto && runnerTab) runnerTab.focus();
     } catch (e) {
         runnerTab = null;
     }
