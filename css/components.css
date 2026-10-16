@@ -2,6 +2,7 @@
    Komponen bersama v1 & v2 (dimuat di kedua halaman)
    - .float-variant  : tombol pojok kiri bawah (switch v1 <-> v2)
    - .pwa-install   : banner PWA install di atas
+   - .new-ui-bubble : chip "tampilan baru tersedia" (v1 only)
    Tema (styles.css / v2.css) override warna + offset via cascade.
    ============================================================ */
 
@@ -233,4 +234,109 @@
     .pwa-install {
         transition: none;
     }
+}
+
+/* ---------- New-UI bubble (v1 & v2, di-suntik oleh js/new-ui-bubble.js) ---------- */
+
+.new-ui-bubble {
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top, 0px) + 12px);   /* di bawah topbar (tinggi 56) */
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    z-index: 750;            /* di bawah topbar (z:800), di atas main content */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+    background: var(--surface-card, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: 9999px;
+    box-shadow:
+        0 10px 25px -10px rgba(0, 0, 0, 0.4),
+        0 2px 6px rgba(0, 0, 0, 0.15);
+    color: var(--text, #e2e8f0);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 220ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: auto;
+}
+
+.new-ui-bubble.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.new-ui-bubble__icon {
+    display: flex;
+    width: 1.125rem;
+    height: 1.125rem;
+    color: #fbbf24;     /* amber untuk sparkle */
+    flex-shrink: 0;
+}
+
+.new-ui-bubble__icon svg { width: 100%; height: 100%; }
+
+.new-ui-bubble__text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.new-ui-bubble__cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 0.875rem;
+    background: var(--primary, #6366f1);
+    color: #fff;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 160ms ease, transform 120ms ease;
+    flex-shrink: 0;
+}
+
+.new-ui-bubble__cta:hover { background: var(--primary-hover, #4f46e5); }
+.new-ui-bubble__cta:active { transform: scale(0.97); }
+
+.new-ui-bubble__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    border-radius: 9999px;
+    transition: background 160ms ease, color 160ms ease;
+    flex-shrink: 0;
+}
+
+.new-ui-bubble__close:hover {
+    background: var(--surface-raised, #334155);
+    color: var(--text, #e2e8f0);
+}
+
+.new-ui-bubble__close svg { width: 0.875rem; height: 0.875rem; }
+
+.new-ui-bubble__close:focus-visible,
+.new-ui-bubble__cta:focus-visible {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+    .new-ui-bubble__text { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .new-ui-bubble { transition: none; }
 }

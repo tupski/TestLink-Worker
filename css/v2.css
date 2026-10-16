@@ -378,6 +378,13 @@ body.v2-body {
 }
 
 .v2-tool-row:active { background: var(--surface-2); }
+
+.v2-tool-row--accent {
+    background: var(--accent-soft);
+    border-color: var(--accent-line);
+}
+.v2-tool-row--accent:hover { background: var(--accent-line); }
+.v2-tool-row--accent:active { background: var(--accent-soft); }
 .v2-tool-row__icon {
     width: 40px;
     height: 40px;
@@ -737,6 +744,28 @@ body.v2-body {
 
 .v2-iconbtn:active { background: var(--border); }
 
+.v2-linkbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    color: var(--ink-2);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: color 160ms ease, background 160ms ease;
+}
+
+.v2-linkbtn--muted { color: var(--ink-3); font-size: 12px; }
+.v2-linkbtn--muted:hover { color: var(--ink); background: var(--surface-2); }
+.v2-linkbtn--center { display: flex; width: 100%; text-align: center; }
+
 @keyframes v2Fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes v2SlideUp { from { transform: translateY(24px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
 
@@ -1048,6 +1077,18 @@ body.v2-body {
 .v2-terminal__body::-webkit-scrollbar-thumb { background: rgba(215, 227, 219, .2); border-radius: 999px; }
 .v2-hist__display::-webkit-scrollbar-thumb,
 .v2-modal__body::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }
+
+/* ---------- New-UI bubble override untuk tema v2 ---------- */
+.new-ui-bubble {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--ink);
+}
+.new-ui-bubble__icon { color: var(--accent); }
+.new-ui-bubble__close { color: var(--ink-2); }
+.new-ui-bubble__close:hover { background: var(--hover); color: var(--ink); }
+.new-ui-bubble__cta { background: var(--accent); }
+.new-ui-bubble__cta:hover { background: var(--accent-strong, var(--accent)); }
 
 /* ---------- Hormati preferensi gerak ---------- */
 @media (prefers-reduced-motion: reduce) {

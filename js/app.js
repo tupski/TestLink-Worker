@@ -104,6 +104,19 @@ function stopDeadlineWatch() {
     }
 }
 
+/** Scroll kontainer log ping ke baris terbaru.
+ * Dipakai oleh startPingTestDetailed() agar terminal auto-scroll saat log bertambah.
+ * Bekerja untuk v1 (overflow di #pingTerminalWrapper) maupun v2 (overflow di #pingModalTerminal.v2-terminal__body):
+ * yang punya scrollHeight > clientHeight berarti kontainer itu yang scrollable. */
+function scrollPingTerminalToBottom(wrapper, terminal) {
+    if (wrapper && wrapper.scrollHeight > wrapper.clientHeight + 1) {
+        wrapper.scrollTop = wrapper.scrollHeight;
+    }
+    if (terminal && terminal.scrollHeight > terminal.clientHeight + 1) {
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+}
+
 function startDeadlineWatch() {
     stopDeadlineWatch();
     const tick = () => {
@@ -199,7 +212,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (rst) return resetProgress(rst.getAttribute('data-cat-reset'));
     });
 
-    checkConnectionInfo();
+    // Auto-buka modal cek koneksi hanya jika user belum dismiss hari ini.
+    if (!isConnCheckDismissed()) checkConnectionInfo();
     registerPWA();
     refreshHistoryMeta();
     setInterval(refreshHistoryMeta, 120000);
@@ -669,19 +683,31 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function submitValidation(status) {
+    // Selalu sembunyikan kotak validasi begitu tombol diklik, apapun state-nya.
+    // Ini mencegah "tidak ada respon" kalau state sudah di-reset (mis. user
+    // tidak sengaja klik Stop sebelum klik tombol validasi).
+    const box = document.getElementById('validationBox');
+    if (box) box.classList.add('hidden');
+
+    // Anti-double-click: kalau sudah diproses, abaikan klik berikutnya.
     if (!awaitingValidation) return;
     awaitingValidation = false;
-    document.getElementById('validationBox').classList.add('hidden');
+
+    const data = categories[activeCatId];
+    if (!data) {
+        console.warn('[submitValidation] kategori tidak ditemukan:', activeCatId);
+        return;
+    }
+
     runnerState = 'running';
     renderRunnerState();
-    
-    const data = categories[activeCatId];
-    if (status === 'normal') data.normal++; 
+
+    if (status === 'normal') data.normal++;
     else if (status === 'blokir' || status === 'error') data.error++;
-    
+
     data.lastIndex++;
     await finalizeAction();
-    
+
     if (data.lastIndex < data.links.length) triggerNextWithCountdown();
     else finishJobs();
 }
@@ -884,6 +910,26 @@ async function checkConnectionInfo() {
 
 function dismissConnModal() { closeV2Modal(document.getElementById('connModal')); }
 
+// Key + helpers untuk opsi "Jangan ingatkan lagi hari ini" di connModal.
+const CONN_DISMISS_KEY = 'tlw.connCheck.dismissedUntil';
+
+function dismissConnModalToday() {
+    // Timestamp akhir hari ini (23:59:59.999 lokal). Setelah lewat, modal muncul lagi.
+    const until = new Date();
+    until.setHours(23, 59, 59, 999);
+    try { localStorage.setItem(CONN_DISMISS_KEY, String(until.getTime())); } catch (e) {}
+    closeV2Modal(document.getElementById('connModal'));
+    showToast && showToast('Tidak akan muncul lagi sampai besok.');
+}
+
+function isConnCheckDismissed() {
+    try {
+        const v = parseInt(localStorage.getItem(CONN_DISMISS_KEY) || '0', 10);
+        if (!v) return false;
+        return Date.now() < v;
+    } catch (e) { return false; }
+}
+
 // SPEEDTEST DENGAN GRAFIK
 function openSpeedModal() {
     openV2Modal(document.getElementById('speedModal'));
@@ -1032,7 +1078,7 @@ async function startPingTestDetailed() {
             badge.className = PING_BADGE_FAIL;
         }
         terminal.appendChild(line);
-        wrapper.scrollTop = wrapper.scrollHeight;
+        scrollPingTerminalToBottom(wrapper, terminal);
         
         const p = targets.length ? Math.round(((i + 1) / targets.length) * 100) : 0;
         document.getElementById('pingProgressBar').style.width = p + "%";
@@ -1044,7 +1090,7 @@ async function startPingTestDetailed() {
     startBtn.innerText = "Mulai";
     startBtn.className = "bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl text-[11px] uppercase tracking-widest shadow-md active:scale-95 transition-all";
     terminal.innerHTML += `<div class="pt-4 text-white font-black uppercase">SELESAI, GAGAL ${failCount}</div>`;
-    wrapper.scrollTop = wrapper.scrollHeight;
+    scrollPingTerminalToBottom(wrapper, terminal);
     
     finalizeAction();
 }
