@@ -1,6 +1,6 @@
 /* Minimal SW: cache shell app; bump CACHE untuk invalidate */
-const CACHE = 'testlink-v17';
-const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/utils.js', '/js/dialog.js', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/js/pwa.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png'];
+const CACHE = 'testlink-v18';
+const ASSETS = ['/', '/index.html', '/admin.html', '/about.html', '/CHANGELOG.md', '/css/tailwind-built.css', '/css/styles.css', '/js/utils.js', '/js/dialog.js', '/js/app.js', '/js/admin.js', '/js/admin-links.js', '/js/pwa.js', '/js/install-banner.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
     e.waitUntil(
