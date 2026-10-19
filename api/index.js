@@ -179,13 +179,146 @@ async function resolveUrlWithRedirects(startUrl, maxMs) {
 }
 
 const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_URL) || process.env.VERCEL_ENV === 'production';
+
+/** Terjemahan dialek SQLite → MySQL untuk query yang dipakai file ini saja. */
+function toMysqlSql(sql) {
+    let s = String(sql);
+    s = s.replace(/\bkey\b/g, '`key`');
+    s = s.replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT IGNORE INTO');
+    s = s.replace(/\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b/gi, 'INT PRIMARY KEY AUTO_INCREMENT');
+    s = s.replace(/\bid\s+TEXT\s+PRIMARY\s+KEY\b/gi, 'id VARCHAR(191) PRIMARY KEY');
+    s = s.replace(/\bTEXT\s+PRIMARY\s+KEY\b/gi, 'VARCHAR(191) PRIMARY KEY');
+    s = s.replace(/\b(device_id|site_id)\s+TEXT\b/gi, '$1 VARCHAR(191)');
+    s = s.replace(/\bBEGIN\s+TRANSACTION\b/gi, 'START TRANSACTION');
+    s = s.replace(
+        /\bON\s+CONFLICT\s*\([^)]*\)\s*DO\s+UPDATE\s+SET\s+([\s\S]*)$/i,
+        (m, sets) => 'ON DUPLICATE KEY UPDATE ' + sets.replace(/\bexcluded\.(\w+)/gi, 'VALUES($1)')
+    );
+    return s;
+}
+
+/** Adapter mysql2 dengan API callback yang sama seperti `sqlite3` (all/get/run/serialize/prepare). */
+function createMysqlCompat() {
+    const mysql = require('mysql2');
+    const cfg = {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: Number(process.env.DB_PORT) || 3306,
+        user: process.env.DB_USER || '',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || undefined,
+        waitForConnections: true,
+        connectionLimit: Number(process.env.DB_CONNECTION_LIMIT) || 10,
+        charset: 'utf8mb4',
+        dateStrings: true
+    };
+    let conn = null;
+    let failedLogged = false;
+
+    function open() {
+        conn = mysql.createConnection(cfg);
+        conn.on('error', (e) => {
+            console.error(`❌ MySQL error: ${e.code || e.message}`);
+            if (e.fatal) conn = null;
+        });
+        conn.connect((err) => {
+            if (err) {
+                console.error(
+                    `❌ MySQL connect failed (${cfg.host}:${cfg.port}/${cfg.database || ''}): ${err.code || err.message}`
+                );
+            } else {
+                console.log(`🐬 MySQL connected: ${cfg.user}@${cfg.host}:${cfg.port}/${cfg.database || ''}`);
+            }
+        });
+        return conn;
+    }
+
+    function query(sql, params, cb) {
+        const c = conn || open();
+        c.query(toMysqlSql(sql), params || [], (err, result) => {
+            // mysql2 tidak selalu memanggil callback connect() saat server tak terjangkau;
+            // error koneksi pertama kali muncul di sini. Tetap log keras, jangan fallback diam-diam.
+            if (err && err.fatal && !failedLogged) {
+                failedLogged = true;
+                console.error(
+                    `❌ MySQL connect failed (${cfg.host}:${cfg.port}/${cfg.database || ''}): ${err.code || err.message}`
+                );
+            }
+            cb(err, result);
+        });
+    }
+
+    function splitArgs(args) {
+        if (typeof args[0] === 'function') return { params: [], cb: args[0] };
+        if (Array.isArray(args[0])) {
+            return { params: args[0], cb: typeof args[1] === 'function' ? args[1] : null };
+        }
+        const last = args[args.length - 1];
+        return typeof last === 'function'
+            ? { params: args.slice(0, -1), cb: last }
+            : { params: args, cb: null };
+    }
+
+    function runQuery(sql, params, cb) {
+        query(sql, params, (err, result) => {
+            if (typeof cb !== 'function') return;
+            cb.call({ changes: result && result.affectedRows, lastID: result && result.insertId }, err);
+        });
+    }
+
+    return {
+        all(sql, ...args) {
+            const { params, cb } = splitArgs(args);
+            query(sql, params, (err, rows) => cb && cb(err, rows));
+        },
+        get(sql, ...args) {
+            const { params, cb } = splitArgs(args);
+            query(sql, params, (err, rows) => cb && cb(err, rows && rows[0]));
+        },
+        run(sql, ...args) {
+            const { params, cb } = splitArgs(args);
+            runQuery(sql, params, cb);
+        },
+        serialize(fn) {
+            fn();
+        },
+        prepare(sql) {
+            const queued = [];
+            return {
+                run(...args) {
+                    const { params, cb } = splitArgs(args);
+                    queued.push({ params, cb });
+                },
+                finalize(cb) {
+                    const done = typeof cb === 'function' ? cb : () => {};
+                    const next = (i) => {
+                        if (i >= queued.length) return done(null);
+                        runQuery(sql, queued[i].params, (err) => {
+                            if (typeof queued[i].cb === 'function') queued[i].cb(err);
+                            if (err) return done(err);
+                            next(i + 1);
+                        });
+                    };
+                    next(0);
+                }
+            };
+        }
+    };
+}
+
+/**
+ * Pilih driver dari DB_TYPE. Nilai selain mysql/mariadb (termasuk kosong) = SQLite.
+ * `DB_CONNECTION_LIMIT` hanya dipakai driver MySQL.
+ */
+const DB_TYPE = String(process.env.DB_TYPE || 'sqlite').trim().toLowerCase();
+const USE_MYSQL = DB_TYPE === 'mysql' || DB_TYPE === 'mariadb';
+
 const dbFolder = isVercel ? '/tmp' : path.join(ROOT, 'data');
-if (!fs.existsSync(dbFolder)) {
+if (!USE_MYSQL && !fs.existsSync(dbFolder)) {
     fs.mkdirSync(dbFolder, { recursive: true });
 }
 const dbPath = path.join(dbFolder, 'database.sqlite');
 
-if (isVercel && !fs.existsSync(dbPath)) {
+if (!USE_MYSQL && isVercel && !fs.existsSync(dbPath)) {
     const bundledDb = path.join(ROOT, 'data', 'database.sqlite');
     if (fs.existsSync(bundledDb)) {
         fs.copyFileSync(bundledDb, dbPath);
@@ -193,11 +326,17 @@ if (isVercel && !fs.existsSync(dbPath)) {
     }
 }
 
-const db = new sqlite3.Database(dbPath);
+const db = USE_MYSQL ? createMysqlCompat() : new sqlite3.Database(dbPath);
 
-console.log(`💾 Using ${isVercel ? 'Vercel /tmp' : 'Local'} SQLite Database at: ${dbPath}`);
-if (isVercel) {
-    console.warn('⚠️ Warning: Data stored in /tmp will be lost when the server restarts on Vercel.');
+if (USE_MYSQL) {
+    console.log(
+        `💾 Using MySQL at ${process.env.DB_USER || '(no user)'}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME || '(no database)'}`
+    );
+} else {
+    console.log(`💾 Using ${isVercel ? 'Vercel /tmp' : 'Local'} SQLite Database at: ${dbPath}`);
+    if (isVercel) {
+        console.warn('⚠️ Warning: Data stored in /tmp will be lost when the server restarts on Vercel.');
+    }
 }
 
 db.serialize(() => {
