@@ -203,6 +203,22 @@
                     <h3 class="section-title">Urutan tampil di worker</h3>
                     <div id="listDisplay" class="space-y-3"></div>
                 </div>
+
+                <div class="card space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Backup & restore</h3>
+                        <p class="text-xs text-slate-400 mt-1">Simpan semua kategori beserta link ke satu file JSON, lalu pulihkan kapan saja.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="bkExportBtn" class="btn btn--secondary" onclick="bkExport()">Backup JSON</button>
+                        <label for="bkFileInput" class="btn btn--ghost cursor-pointer">
+                            Restore dari file
+                        </label>
+                        <input type="file" id="bkFileInput" accept=".json,application/json" class="hidden" onchange="bkHandleFile(this)">
+                    </div>
+                    <div id="bkPreview" class="hidden rounded-lg border border-slate-800 bg-slate-950/60 p-4"></div>
+                    <p class="text-xs text-slate-500">File backup memuat nama kategori, daftar link, status aktif, dan urutan tampil.</p>
+                </div>
             </div>
 
             <!-- Panel: Pengaturan -->
@@ -414,6 +430,7 @@
     <script src="/js/dialog.js"></script>
     <script src="/js/pwa.js"></script>
     <script src="/js/admin-links.js"></script>
+    <script src="/js/admin-backup.js"></script>
     <script src="/js/admin.js"></script>
     <script>document.getElementById('adminFooterYear').textContent = new Date().getFullYear();</script>
 </body>
