@@ -279,6 +279,86 @@ function uuidv4() {
 }
 
 /**
+ * Backup/restore kategori + link.
+ * Normalisasi & validasi payload dijalankan di server agar hasil restore konsisten
+ * baik file dibuat oleh versi ini maupun file lama/manual.
+ */
+
+/** Ubah link (string dokumen atau array) jadi array URL bersih, satu per entri. */
+function normalizeLinkList(raw) {
+    let items = [];
+    if (Array.isArray(raw)) items = raw;
+    else if (typeof raw === 'string') items = raw.split(/\r?\n/);
+    return items
+        .map((l) => String(l == null ? '' : l).trim())
+        .filter(Boolean)
+        .map((l) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(l) ? l : `https://${l}`));
+}
+
+/**
+ * Validasi payload backup jadi { entries, skipped }.
+ * Tiap entri: { id, name, links: string[], isActive, sortOrder }.
+ */
+function normalizeBackupPayload(payload) {
+    const rawSites = Array.isArray(payload) ? payload : payload && Array.isArray(payload.sites) ? payload.sites : null;
+    if (!rawSites) throw new Error('Format backup tidak dikenali (butuh field "sites").');
+
+    const entries = [];
+    let skipped = 0;
+    rawSites.slice(0, 1000).forEach((site) => {
+        if (!site || typeof site !== 'object') {
+            skipped++;
+            return;
+        }
+        const name = String(site.name == null ? '' : site.name)
+            .trim()
+            .slice(0, 200);
+        const links = normalizeLinkList(site.links);
+        if (!name || links.length === 0) {
+            skipped++;
+            return;
+        }
+        const activeRaw = site.is_active != null ? site.is_active : site.isActive;
+        const orderRaw = site.sort_order != null ? site.sort_order : site.sortOrder;
+        entries.push({
+            id: typeof site.id === 'string' && site.id.trim() ? site.id.trim().slice(0, 100) : null,
+            name,
+            links,
+            isActive: activeRaw === 0 || activeRaw === false || activeRaw === '0' ? 0 : 1,
+            sortOrder: Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : null
+        });
+    });
+    return { entries, skipped };
+}
+
+/** Baca semua site (+ progress satu device) untuk dijadikan file backup. */
+function loadBackupData(deviceId, cb) {
+    db.all(`SELECT * FROM sites ORDER BY sort_order ASC, created_at DESC`, [], (err, rows) => {
+        if (err) return cb(err);
+        const sites = (rows || []).map((row) => ({
+            id: row.id,
+            name: row.name,
+            links: normalizeLinkList(row.links),
+            is_active: row.is_active === 0 ? 0 : 1,
+            sort_order: Number(row.sort_order) || 0
+        }));
+        if (!deviceId) return cb(null, { sites, progress: [] });
+        db.all(`SELECT * FROM progress WHERE device_id = ?`, [deviceId], (err2, progRows) => {
+            if (err2) return cb(err2);
+            cb(null, {
+                sites,
+                progress: (progRows || []).map((p) => ({
+                    site_id: p.site_id,
+                    last_index: p.last_index,
+                    normal_count: p.normal_count,
+                    error_count: p.error_count
+                }))
+            });
+        });
+    });
+}
+
+/**
  * Keamanan admin:
  * - ADMIN_PASSWORD wajib di produksi (tanpa fallback hardcoded).
  * - Di dev tanpa env, hanya localhost yang boleh memakai sandi dev.
@@ -533,6 +613,138 @@ app.get('/api/history', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ history });
     });
+});
+
+/* ---------- Backup & restore kategori + link ---------- */
+
+function dbGet(sql, params) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params || [], (err, row) => (err ? reject(err) : resolve(row)));
+    });
+}
+
+function dbRun(sql, params) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params || [], function (err) {
+            if (err) return reject(err);
+            resolve({ changes: this.changes, lastID: this.lastID });
+        });
+    });
+}
+
+/** Unduh seluruh kategori + link (opsional: progress milik satu device). */
+app.get('/api/backup', requireLocalDevOnly, requireAdmin, (req, res) => {
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId.slice(0, 120) : '';
+    loadBackupData(deviceId, (err, data) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+            format: 'testlink-backup',
+            version: 1,
+            exported_at: getNowWIB(),
+            device_id: deviceId || null,
+            sites: data.sites,
+            progress: data.progress
+        });
+    });
+});
+
+/**
+ * Restore dari file backup.
+ * mode=merge   → kategori baru ditambahkan, nama yang sudah ada dilewati (default, tidak menghapus data).
+ * mode=replace → semua kategori dihapus dulu, lalu isi file dipulihkan apa adanya.
+ */
+app.post('/api/restore', requireLocalDevOnly, requireAdmin, async (req, res) => {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const mode = body.mode === 'replace' ? 'replace' : 'merge';
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.slice(0, 120) : '';
+
+    let parsed;
+    try {
+        parsed = normalizeBackupPayload(body.payload != null ? body.payload : body);
+    } catch (e) {
+        return res.status(400).json({ error: e.message });
+    }
+    const { entries, skipped } = parsed;
+    if (entries.length === 0) {
+        return res.status(400).json({ error: 'Tidak ada kategori valid di file backup.' });
+    }
+
+    const now = getNowWIB();
+    const summary = { mode, added: 0, skipped, deleted: 0, progressRestored: 0, restoredNames: [] };
+
+    try {
+        if (mode === 'replace') {
+            const existing = await dbGet(`SELECT COUNT(*) AS n FROM sites`, []);
+            summary.deleted = existing ? existing.n : 0;
+            await dbRun(`DELETE FROM sites`, []);
+            await dbRun(`DELETE FROM progress`, []);
+        }
+
+        let maxOrder = 0;
+        if (mode === 'merge') {
+            const row = await dbGet(`SELECT MAX(sort_order) AS m FROM sites`, []);
+            maxOrder = row && Number.isFinite(Number(row.m)) ? Number(row.m) : 0;
+        }
+
+        for (const entry of entries) {
+            let targetId = null;
+            if (mode === 'merge') {
+                const clash = await dbGet(`SELECT id FROM sites WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))`, [entry.name]);
+                if (clash) continue; // merge tidak menimpa kategori yang sudah ada
+                targetId = uuidv4();
+            } else {
+                // replace: pakai id lama bila masih unik agar progress bisa dipulihkan
+                targetId = entry.id || uuidv4();
+                const clash = await dbGet(`SELECT id FROM sites WHERE id = ?`, [targetId]);
+                if (clash) targetId = uuidv4();
+            }
+
+            const order = mode === 'merge' ? ++maxOrder : entry.sortOrder != null ? entry.sortOrder : maxOrder++;
+            await dbRun(`INSERT INTO sites (id, name, links, created_at, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?)`, [
+                targetId,
+                entry.name,
+                entry.links.join('\n'),
+                now,
+                order,
+                entry.isActive
+            ]);
+            summary.added++;
+            summary.restoredNames.push(entry.name);
+        }
+
+        const payloadProgress = body.payload && Array.isArray(body.payload.progress) ? body.payload.progress : [];
+        if (deviceId && payloadProgress.length > 0) {
+            for (const p of payloadProgress.slice(0, 2000)) {
+                if (!p || typeof p.site_id !== 'string') continue;
+                const site = await dbGet(`SELECT id FROM sites WHERE id = ?`, [p.site_id]);
+                if (!site) continue;
+                await dbRun(
+                    `INSERT INTO progress (device_id, site_id, last_index, normal_count, error_count)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON CONFLICT(device_id, site_id) DO UPDATE SET
+                        last_index=excluded.last_index,
+                        normal_count=excluded.normal_count,
+                        error_count=excluded.error_count`,
+                    [deviceId, p.site_id, Number(p.last_index) || 0, Number(p.normal_count) || 0, Number(p.error_count) || 0]
+                );
+                summary.progressRestored++;
+            }
+        }
+
+        await dbRun(`INSERT INTO history (action, site_name, diff_summary, diff_details, created_at) VALUES (?, ?, ?, ?, ?)`, [
+            'RESTORE',
+            'Backup',
+            `Restore ${mode}: ${summary.added} kategori dipulihkan, ${summary.skipped} dilewati${
+                mode === 'replace' ? `, ${summary.deleted} kategori lama dihapus` : ''
+            }.`,
+            JSON.stringify({ added: summary.restoredNames, removed: [] }),
+            now
+        ]);
+
+        res.json(summary);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/sites', requireLocalDevOnly, requireAdmin, (req, res) => {
