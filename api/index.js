@@ -829,7 +829,10 @@ app.post('/api/restore', requireLocalDevOnly, requireAdmin, async (req, res) => 
             let targetId = null;
             if (mode === 'merge') {
                 const clash = await dbGet(`SELECT id FROM sites WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))`, [entry.name]);
-                if (clash) continue; // merge tidak menimpa kategori yang sudah ada
+                if (clash) {
+                    summary.skipped++; // nama sudah ada: dilewati, bukan ditimpa
+                    continue;
+                }
                 targetId = uuidv4();
             } else {
                 // replace: pakai id lama bila masih unik agar progress bisa dipulihkan

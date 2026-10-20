@@ -113,6 +113,16 @@ Folder `cloudflare/` berisi reverse proxy ke backend Vercel untuk pemakaian doma
    ```
 3. Atur rute domain di dashboard Cloudflare: Workers & Pages → worker → Triggers → Routes.
 
+### Cek runtime setelah deploy
+
+`api/index.js` berubah tapi proses Node di server belum restart adalah penyebab umum endpoint baru balas 404. Cek dari luar:
+
+```bash
+npm run check:deploy -- https://domain-anda
+```
+
+`/api/backup` 404 = build lama (pull + restart proses), 403/503 = route sudah ada dan hanya butuh `x-admin-password`.
+
 ---
 
 ## Struktur Proyek
